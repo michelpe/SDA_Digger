@@ -1,0 +1,105 @@
+import sys
+import getopt
+import os
+import re
+import DNAC_Connector
+import json
+import AnalysisCore
+import ParseCommands
+
+edge_cmd_list = [["show lisp session", "show lisp instance * ethernet database","sh lisp instance-id * ipv4 database","sh lisp instance-id * ipv6 database","show device-tracking database"]
+                 ]
+
+
+def check_dev(dnac,dnac_core,fabric,dev):
+    resp = dnac.geturl(f"/dna/intent/api/v1/business/sda/device?deviceIPAddress={dev['managementIpAddress']}")
+    if resp['response']['status']=="success":
+        roles = resp['response']['roles']
+        print(f"{dev['hostname']} has role(s) {resp['response']['roles']}")
+        resp = dnac.geturl(f"/dna/intent/api/v1/network-device?managementIpAddress={dev['managementIpAddress']}")
+        if len(roles) > 0:
+            uuid=resp['response'][0]['id']
+            for role in roles:
+                dnac_core.add(["devices",fabric,role,dev['managementIpAddress'],{"name":dev["hostname"],"IOS":dev['softwareVersion'],"id":uuid, "roles":roles}])
+                dnac.topo['devices'][uuid]=dev['hostname']
+    return
+
+def build_hierarch(dnac,dnac_core):
+    resp = dnac.geturl("/dna/intent/api/v1/site")
+    sites = resp["response"]
+    site_view =[]
+    dnac.topo = {}
+    dnac.topo['sites']={}
+    dnac.topo['fabrics']={}
+    dnac.topo['devices']={}
+    for site in sites:
+        if 'parentId' in site.keys():
+            site_view.append(site['siteNameHierarchy'])
+            dnac.topo['sites'][site['siteNameHierarchy']]=site['id']
+    site_view.sort()
+    print ("Discovered Areas/Buildings/floors:")
+    [print (x)  for x in site_view]
+    fabric_list = []
+    for site in site_view:
+        resp=dnac.geturl(f"/dna/intent/api/v1/business/sda/fabric-site?siteNameHierarchy={site.replace(' ','+')}")
+        if resp['status'] == "success" :
+            fabric_list.append(resp['fabricName'])
+            dnac.topo['fabrics'][resp['fabricName']] = {"site":site,"id":dnac.topo['sites'][site]}
+            dnac_core.add(["topology",site,{"fabric":dnac.topo['fabrics'][resp['fabricName']]}])
+
+    for fabric in fabric_list:
+        print (f"Discovered devices in Fabric {fabric} :")
+        resp = dnac.geturl(f"/dna/intent/api/v1/membership/{dnac.topo['fabrics'][fabric]['id']}")
+        devices = resp['device']
+        [[ check_dev(dnac,dnac_core,fabric,y) for y in x['response']] for x in devices]
+
+def check_fabric(fabric,dnac,dnac_core):
+    print (f"Importing CP information for fabric {fabric}")
+    cp=dnac_core.get(["devices",fabric,"MAPSERVER"])
+    if cp is None:
+        print("no CP found, exciting")
+        return
+    for cp_node in cp:
+        ret = dnac.command_run(["show lisp site","show lisp session","show lisp instance * ethernet server","sh lisp instance-id * ethernet server address-resolution"],[cp[cp_node]["id"]])
+        for responses in ret:
+            #print (responses["output"])
+            ParseCommands.ParseSingleDev(responses["output"],responses["host"],dnac_core)
+        print(f"Completed {responses['host']} ")
+    edge = dnac_core.get(["devices", fabric, "EDGENODE"])
+    print(f"Importing basic edge information for fabric {fabric}")
+    edges = []
+    i=0
+    for edge_dev in edge:
+        edges.append(edge[edge_dev]["id"])
+        i=i+1
+        if len(edges) >4 or i == len(edge):
+            for cmd in edge_cmd_list:
+                ret = dnac.command_run(cmd, edges)
+                for responses in ret:
+                    ParseCommands.ParseSingleDev(responses["output"], responses["host"], dnac_core)
+            print (f"Completed import on {i} edges ")
+            edges=[]
+    return
+
+def Build_Lisp_Fabric(dnac,dnac_core):
+    if len(dnac.topo['fabrics']) == 1:
+        print("Only one fabric found, proceeding")
+        for fabric in dnac.topo['fabrics']:
+            check_fabric(fabric, dnac, dnac_core)
+    elif len(dnac.topo['fabrics']) > 1:
+        print("more then one fabric! lets do them all (yes am lazy :) ")
+        for fabric in dnac.topo['fabrics']:
+            check_fabric(fabric, dnac, dnac_core)
+    else:
+        print(f"No fabrics found, exiting")
+    print(dnac_core.printit())
+
+def main(argv):
+    dnac = DNAC_Connector.DnacCon("10.86.201.151", "admin", "Cisco123!")
+    dnac_core = AnalysisCore.Analysis_Core()
+    build_hierarch(dnac,dnac_core)
+    Build_Lisp_Fabric(dnac,dnac_core)
+    return
+
+if __name__ == "__main__":
+   main(sys.argv[1:])

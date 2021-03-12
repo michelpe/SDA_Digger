@@ -17,6 +17,7 @@ class DnacCon:
         self.get_token()
         self.topo={}
         self.connect= None
+        self.fabric = ""
         #print(self.token)
 
     def connect_dnac(self,http_action,http_url,http_headers):

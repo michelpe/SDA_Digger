@@ -102,6 +102,7 @@ def Build_Lisp_Fabric(dnac,dnac_core):
         print("Only one fabric found, proceeding")
         for fabric in dnac.topo['fabrics']:
             check_fabric(fabric, dnac, dnac_core)
+            dnac.fabric=fabric
     elif len(dnac.topo['fabrics']) > 1:
         print("more then one fabric! lets do them all (yes am lazy :) ")
         for fabric in dnac.topo['fabrics']:
@@ -164,6 +165,21 @@ def Eth_Host_Check(dnac,dnac_core,host):
                    for responses in ret:
                         print(responses["output"])
                         #ParseCommands.ParseSingleDev(responses["output"], responses["host"], debug_core)
+                   fabric=dnac.fabric
+                   cp = dnac_core.get(["devices", dnac.fabric, "MAPSERVER"])
+                   if cp is None:
+                       print("no CP found, exciting")
+                       return
+                   for cp_node in cp:
+                       print ("*"*80)
+                       print (f"Analazing CP nodes for {ipaddress} and {host}")
+                       ret = dnac.command_run(
+                           [f"sh lisp instance-id {lispinstance} ethernet server {host} ", f"sh lisp instance-id {lispinstance} ethernet server {host} registration last 10",
+                            f"sh lisp instance-id {lispinstance} ethernet server address-registration {ipaddress}"]
+                            , [cp[cp_node]["id"]])
+                       for responses in ret:
+                           print (responses["output"])
+                           #ParseCommands.ParseSingleDev(responses["output"], responses["host"], dnac_core)
 
             else:
                 print(f"skipping IPv6 address {ipaddress} for now(not yet supported)")
@@ -175,7 +191,7 @@ def main(argv):
     dnac=input ("DNAC IP address :")
     username = input("username :")
     password = getpass()
-    dnac = DNAC_Connector.DnacCon("10.48.91.207", "admin", "Dsbutftp_123")
+    dnac = DNAC_Connector.DnacCon(dnac, username, password)
     dnac_core = AnalysisCore.Analysis_Core()
     build_hierarch(dnac,dnac_core)
     Build_Lisp_Fabric(dnac,dnac_core)

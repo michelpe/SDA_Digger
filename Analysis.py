@@ -203,7 +203,7 @@ def CheckEdgeDB():
                             99)
                     else:
                         LogIt(
-                            f"Warning: {edgename} {edgeip} {edgeinstance} {edgeeid} {edgeinstanceaf} not showing as RLOC on CP nodes but RLOC is {cpinfo}",
+                            f"Debug: {edgename} {edgeip} {edgeinstance} {edgeeid} {edgeinstanceaf} not showing as RLOC on CP nodes but RLOC is {cpinfo}",
                             4)
                         statfail = statfail + 1
 

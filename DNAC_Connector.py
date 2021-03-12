@@ -28,9 +28,7 @@ class DnacCon:
         self.token=None
         authraw=self.username+":"+self.password
         auth64=base64.b64encode(authraw.encode("utf-8")).decode("utf-8")
-        print (self.username)
-        print (self.password)
-        print(auth64)
+
         try:
             self.conn = http.client.HTTPSConnection(self.DNAC,context = ssl._create_unverified_context())
         except:
@@ -44,7 +42,7 @@ class DnacCon:
         try:
             #print(headers)
             self.conn.request("POST", f"https://{self.DNAC}/api/system/v1/auth/token", headers=headers)
-            print (headers)
+            #print (headers)
         except:
             print(f"Error connecting to server {self.DNAC}, exiting")
             exit()
@@ -124,5 +122,7 @@ class DnacCon:
                        output = single_resp['commandResponses']['SUCCESS'][command]
                        ret.append({"host":res_name,"output":output})
                 else:
+                    for command in single_resp['commandResponses']['FAILURE']:
+                        print (single_resp['commandResponses']["FAILURE"].keys())
                     pass
         return ret

@@ -95,7 +95,7 @@ def ParseMTU(output,hostname):
     return
 
 
-def ParseConfig(output, key, hostname):
+def ParseConfig(output, key, hostname,dnac_core):
     splits = splititup(output, "^!")
     for splitted in splits:
         if len(splitted) > 1:

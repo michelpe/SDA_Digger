@@ -72,7 +72,6 @@ def LispDatabase(output, hostname, AF,dnac_core):
 def LispDatabaseAR(output, hostname,dnac_core):
     tdict = dict()
     l2instance = 0
-    print ("$$$"*80)
     splits = (splititup(output, "^LISP ETR Address Resolution "))
     for split in splits:
         l2instance = str.split(split[0])[-1]

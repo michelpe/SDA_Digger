@@ -19,7 +19,6 @@ def check_dev(dnac,dnac_core,fabric,dev):
         print(f"{dev['hostname']} has role(s) {resp['response']['roles']}")
         resp = dnac.geturl(f"/dna/intent/api/v1/network-device?managementIpAddress={dev['managementIpAddress']}")
         #print(dev["hostname"])
-        #print (resp)
         if len(roles) > 0:
             uuid=resp['response'][0]['id']
             for role in roles:
@@ -53,22 +52,14 @@ def build_hierarch(dnac,dnac_core):
             dnac.topo['fabrics'][resp['fabricName']] = {"site":site,"id":dnac.topo['sites'][site]}
             dnac_core.add(["topology",site,{"fabric":dnac.topo['fabrics'][resp['fabricName']]}])
 
- #   for fabric in fabric_list:
- #       print (f"Discovered devices in Fabric {fabric} :")
- #       resp = dnac.geturl(f"/dna/intent/api/v1/membership/{dnac.topo['fabrics'][fabric]['id']}")
- #       devices = resp['device']
- #       #print (resp['site']['response'][0]["additionalInfo"][3]["attributes"]["primaryWlc"])
- #       [[ check_dev(dnac,dnac_core,fabric,y) for y in x['response']] for x in devices]
+    for fabric in fabric_list:
+        print (f"Discovered devices in Fabric {fabric} :")
+        resp = dnac.geturl(f"/dna/intent/api/v1/membership/{dnac.topo['fabrics'][fabric]['id']}")
+        devices = resp['device']
+        #print (resp['site']['response'][0]["additionalInfo"][3]["attributes"]["primaryWlc"])
+        [[ check_dev(dnac,dnac_core,fabric,y) for y in x['response']] for x in devices]
 
 def check_fabric(fabric,dnac,dnac_core):
-
- #   for fabric in fabric_list:
-    print (f"Discovered devices in Fabric {fabric} :")
-    resp = dnac.geturl(f"/dna/intent/api/v1/membership/{dnac.topo['fabrics'][fabric]['id']}")
-    devices = resp['device']
-    #print (resp['site']['response'][0]["additionalInfo"][3]["attributes"]["primaryWlc"])
-    [[ check_dev(dnac,dnac_core,fabric,y) for y in x['response']] for x in devices]
-
     print (f"Importing CP information for fabric {fabric}")
     cp=dnac_core.get(["devices",fabric,"MAPSERVER"])
     if cp is None:
@@ -84,7 +75,6 @@ def check_fabric(fabric,dnac,dnac_core):
             # print (responses["output"])
             ParseCommands.ParseSingleDev(responses["output"], responses["host"], dnac_core)
         print(f"Completed {responses['host']} ")
-
     edge = dnac_core.get(["devices", fabric, "EDGENODE"])
     print(f"Importing basic edge information for fabric {fabric}")
     edges = []
@@ -117,11 +107,9 @@ def Build_Lisp_Fabric(dnac,dnac_core):
             check_fabric(fabric, dnac, dnac_core)
             dnac.fabric=fabric
     elif len(dnac.topo['fabrics']) > 1:
-        while True:
-            fabric=input(f"Which fabric should be used: {dnac.topo['fabrics'].keys()} ")
-            if fabric in dnac.topo['fabrics'].keys():
-              check_fabric(fabric, dnac, dnac_core)
-              break
+        print("more then one fabric! lets do them all (yes am lazy :) ")
+        for fabric in dnac.topo['fabrics']:
+            check_fabric(fabric, dnac, dnac_core)
     else:
         print(f"No fabrics found, exiting")
     #print(dnac_core.printit())
@@ -223,7 +211,7 @@ def main(argv):
         elif re.match(r".{4}\..{4}\..{4}",macaddress):
             Eth_Host_Check(dnac,dnac_core,macaddress)
         else:
-            print("Please enter quit or mac address in xxxx.xxxx.xxxx format")
+            print("Please enter quite or mac address in xxxx.xxxx.xxxx format")
     return
 
 if __name__ == "__main__":

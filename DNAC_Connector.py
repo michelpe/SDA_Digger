@@ -84,6 +84,9 @@ class DnacCon:
             exit()
         res = self.conn.getresponse()
         #print (res.status)
+        if res.status == 404:
+            ret = (res.read())
+            print (f"Internal Error encountered {ret} (bapi errors often resolved by disabling/enabling the RESTAPI bundle under platform/manager")
         return json.loads(res.read())
 
     def post(self,url,payload):

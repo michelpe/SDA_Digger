@@ -56,6 +56,7 @@ def LispDatabase(output, hostname, AF,dnac_core):
                     if re.match(r".*\,", lsp[0]):
                         leid = lsp[0].strip(',')
                         lsource = lsp[1:]
+
                         if re.match(".*Inactive.*", lsp[1]):
                             ldrange = "na"
                         else:
@@ -68,6 +69,22 @@ def LispDatabase(output, hostname, AF,dnac_core):
 
     return
 
+def secsplit(s_plit):
+    for line in spli:
+        if re.match(r"^\s", line):
+            print(f"*{line}")
+        elif re.match(r"\S", line):
+            print(f"+{line}")
+        else:
+            print(f"${line}")
+
+def LispDatabase1(output, hostname, AF,dnac_core):
+    splits = (splititup(output, "^[Oo]utput"))
+    for spli in splits:
+        linstance = str.split(spli[0])[-1]
+        leid = ""
+        secsplit(spli)
+    quit()
 
 def LispDatabaseAR(output, hostname,dnac_core):
     tdict = dict()

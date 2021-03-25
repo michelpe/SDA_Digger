@@ -196,7 +196,7 @@ def Eth_Host_Check(dnac,dnac_core,host):
                        ret = dnac.command_run(
                            [f"sh lisp instance-id {lispinstance} ethernet server {host} ", f"sh lisp instance-id {lispinstance} ethernet server {host} registration last 10",
                             f"sh lisp instance-id {lispinstance} ethernet server address-resolution {ipaddress}",
-                            f"sh lisp instance-id {ipaddress} site instance-id {l3inst}"]
+                            f"sh lisp instance-id site {ipaddress} instance-id {l3inst}"]
                             , [cp[cp_node]["id"]])
                        for responses in ret:
                            print (responses["output"])

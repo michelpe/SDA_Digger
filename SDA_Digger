@@ -14,19 +14,23 @@ edge_cmd_list = [["show lisp session", "show lisp instance * ethernet database",
 
 def check_dev(dnac,dnac_core,fabric,dev):
     resp = dnac.geturl(f"/dna/intent/api/v1/business/sda/device?deviceIPAddress={dev['managementIpAddress']}")
-    if resp['response']['status']=="success":
-        roles = resp['response']['roles']
-        print(f"{dev['hostname']} has role(s) {resp['response']['roles']}")
-        resp = dnac.geturl(f"/dna/intent/api/v1/network-device?managementIpAddress={dev['managementIpAddress']}")
-        #print(dev["hostname"])
-        #print (resp)
-        if len(roles) > 0:
-            uuid=resp['response'][0]['id']
-            for role in roles:
-                dnac_core.add(["devices",fabric,role,dev['managementIpAddress'],{"name":dev["hostname"],"IOS":dev['softwareVersion'],"id":uuid, "roles":roles}])
-                dnac_core.add(["Global","Devices",dev["hostname"],{"IP Address":dev["managementIpAddress"]}])
-                dnac.topo['devices'][uuid]=dev['hostname']
-                dnac.topo['ip2uuid'][dev["managementIpAddress"]]=uuid
+    if "response" in resp.keys():
+        if resp['response']['status']=="success":
+            roles = resp['response']['roles']
+            print(f"{dev['hostname']} has role(s) {resp['response']['roles']}")
+            resp = dnac.geturl(f"/dna/intent/api/v1/network-device?managementIpAddress={dev['managementIpAddress']}")
+            #print(dev["hostname"])
+            #print (resp)
+            if len(roles) > 0:
+                uuid=resp['response'][0]['id']
+                for role in roles:
+                    dnac_core.add(["devices",fabric,role,dev['managementIpAddress'],{"name":dev["hostname"],"IOS":dev['softwareVersion'],"id":uuid, "roles":roles}])
+                    dnac_core.add(["Global","Devices",dev["hostname"],{"IP Address":dev["managementIpAddress"]}])
+                    dnac.topo['devices'][uuid]=dev['hostname']
+                    dnac.topo['ip2uuid'][dev["managementIpAddress"]]=uuid
+    else:
+        print(f"Error retrieving SDA API calls needed, possible DNAC version 1.x used")
+        exit()
     return
 
 def build_hierarch(dnac,dnac_core):
@@ -67,7 +71,7 @@ def check_fabric(fabric,dnac,dnac_core):
     resp = dnac.geturl(f"/dna/intent/api/v1/membership/{dnac.topo['fabrics'][fabric]['id']}")
     devices = resp['device']
     #print (resp['site']['response'][0]["additionalInfo"][3]["attributes"]["primaryWlc"])
-    [[ check_dev(dnac,dnac_core,fabric,y) for y in x['response']] for x in devices]
+    [[ check_dev(dnac,dnac_core,fabric,y) for y in x.get('response')] for x in devices]
 
     print (f"Importing CP information for fabric {fabric}")
     cp=dnac_core.get(["devices",fabric,"MAPSERVER"])

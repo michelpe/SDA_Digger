@@ -82,11 +82,30 @@ class DnacCon:
         except:
             print(f"Error connecting to server {self.DNAC}, exiting")
             exit()
-        res = self.conn.getresponse()
-        #print (res.status)
-        if res.status == 404:
-            ret = (res.read())
-            print (f"Internal Error encountered {ret} (bapi errors often resolved by disabling/enabling the RESTAPI bundle under platform/manager")
+        while True:
+            try:
+               res = self.conn.getresponse()
+            except:
+               self.conn = http.client.HTTPSConnection(self.DNAC, context=ssl._create_unverified_context())
+               self.conn.request("GET", realurl, headers=headers)
+               print(f"Reopening https connection")
+            else:
+               #print (res.status)
+                if res.status == 404:
+                    ret = (res.read())
+                    print (f"Internal Error encountered {ret} (bapi errors often resolved by disabling/enabling the RESTAPI bundle under platform/manager")
+                elif res.status == 429:
+                     print(f"Exceeded limit for API calls calling {url}, pausing for 60 seconds")
+                     time.sleep(60)
+                     print(f"Reopening https connection to {self.DNAC} after pausing")
+                     self.conn = http.client.HTTPSConnection(self.DNAC, context=ssl._create_unverified_context())
+                     self.conn.request("GET", realurl, headers=headers)
+                elif res.status > 299:
+                    print(f"{res.status} error encountered when trying to get {url}" )
+                    print(f"{res.read()}")
+                    exit(0)
+                else:
+                    break
         return json.loads(res.read())
 
     def post(self,url,payload):

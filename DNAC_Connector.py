@@ -3,12 +3,14 @@ import ssl
 import http.client
 import json
 import time
+import os
 
 class DnacCon:
     server = None
     username= None
     password = None
     token = None
+    logdir = None
 
     def __init__(self, server, user, pword):
         self.DNAC = server
@@ -18,6 +20,9 @@ class DnacCon:
         self.topo={}
         self.connect= None
         self.fabric = ""
+        time.localtime()
+        self.logdir = f"log{time.localtime().tm_mon}{time.localtime().tm_mday}{time.localtime().tm_hour}{time.localtime().tm_min}"
+        os.makedirs(self.logdir)
         #print(self.token)
 
     def connect_dnac(self,http_action,http_url,http_headers):
@@ -128,6 +133,7 @@ class DnacCon:
         payload = {'commands': commands, 'deviceUuids': devs}
         ret = []
         #print (payload)
+        self.conn = http.client.HTTPSConnection(self.DNAC, context=ssl._create_unverified_context())
         resp = self.post("/dna/intent/api/v1/network-device-poller/cli/read-request",payload)
         #print(resp)
         tresp = self.geturl(resp["response"]["url"])
@@ -148,4 +154,18 @@ class DnacCon:
                     for command in single_resp['commandResponses']['FAILURE']:
                         print (single_resp['commandResponses']["FAILURE"].keys())
                     pass
+        combined={}
+        olddir=os.getcwd()
+        os.chdir(self.logdir)
+        for res in ret:
+            if res["host"] in combined.keys():
+                combined[res["host"]].append(res["output"])
+            else:
+                combined[res["host"]]=[res["output"]]
+        for outhosts in combined.keys():
+          fd = open(f"{outhosts}.txt","a+")
+          for outs in combined[outhosts]:
+            fd.write(outs)
+          fd.close()
+        os.chdir(olddir)
         return ret

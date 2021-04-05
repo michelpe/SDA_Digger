@@ -114,7 +114,7 @@ def check_fabric(fabric,dnac,dnac_core):
     Analysis.CPTooFabric(dnac,dnac_core)
     return
 
-def Build_Lisp_Fabric(dnac,dnac_core):
+def Build_Lisp_Fabric(dnac,dnac_core,fabric):
     if len(dnac.topo['fabrics']) == 1:
         print("Only one fabric found, proceeding")
         for fabric in dnac.topo['fabrics']:
@@ -122,7 +122,8 @@ def Build_Lisp_Fabric(dnac,dnac_core):
             dnac.fabric=fabric
     elif len(dnac.topo['fabrics']) > 1:
         while True:
-            fabric=input(f"Which fabric should be used: {dnac.topo['fabrics'].keys()} ")
+            if fabric is None:
+               fabric=input(f"Which fabric should be used: {dnac.topo['fabrics'].keys()} ")
             if fabric in dnac.topo['fabrics'].keys():
               check_fabric(fabric, dnac, dnac_core)
               break
@@ -130,12 +131,60 @@ def Build_Lisp_Fabric(dnac,dnac_core):
         print(f"No fabrics found, exiting")
     #print(dnac_core.printit())
 
+
+def Eth_L2_check(dnac,dnac_core,debug_core,whereits,hosttotal,host):
+    loc = dnac_core.get(["fabric"])
+    for instances in loc.keys():
+        if dnac_core.get(["fabric", instances, hosttotal]) is not None:
+            lispinstance = instances
+            lisprloc = dnac_core.get(['fabric', instances, hosttotal])['RLOC']
+            rlocuid = dnac.topo['ip2uuid'][lisprloc]
+            devname = dnac.topo['devices'][rlocuid]
+            print(f"Found {host} in LISP Instance {lispinstance} on device {devname} ({lisprloc})")
+
+            ret = dnac.command_run([f"show lisp instance-id {lispinstance} ethernet database {host}",
+                                    f"show lisp instance-id {lispinstance} ethernet database address-resolution {host}",
+                                    f"show device-tracking database mac {host}",
+                                    f"show lisp instance-id {lispinstance} ethernet database wlc {host}"],
+                                   [rlocuid])
+            for responses in ret:
+                print(responses["output"])
+                ParseCommands.ParseSingleDev(responses["output"], responses["host"], debug_core)
+            ret = dnac.command_run([f"show mac address-table address {host}",
+                                    f"show access-session mac {host} detail"],
+                                   [rlocuid])
+            for responses in ret:
+                print(responses["output"])
+                ParseCommands.ParseSingleDev(responses["output"], responses["host"], debug_core)
+    return
+
+
+
 def Eth_Host_Check(dnac,dnac_core,host):
+    devname = ""
+    whereits =[]
     print ("*"*80)
     print (f"Verifying Connectivity for {host}")
     loc = dnac_core.get(["fabric"])
     hosttotal=host+'/48'
+    #print(dnac_core.printit())
     debug_core = AnalysisCore.Analysis_Core()
+    fabric = dnac_core.get(["fabric"])
+    for instances in fabric.keys():
+        if hosttotal in fabric[instances].keys():
+            whereits.append(instances)
+    if len(whereits) == 0 :
+        print(f"Not found mac address ")
+        return
+    elif len(whereits) > 1 :
+        #print(f"found it in instances {whereits}")
+        pass
+    else :
+       pass
+       print(f"found it in instances {whereits}")
+    Eth_L2_check(dnac,dnac_core,debug_core,whereits[0],hosttotal,host)
+
+def Backup():
     for instances in loc.keys():
        if dnac_core.get(["fabric",instances,hosttotal]) is not None:
            lispinstance=instances
@@ -158,10 +207,12 @@ def Eth_Host_Check(dnac,dnac_core,host):
            for responses in ret:
                print(responses["output"])
                ParseCommands.ParseSingleDev(responses["output"], responses["host"], debug_core)
-    #print(debug_core.printit())
+
+    #
     iplayer=debug_core.get(["Global","Device-tracking",devname])
     if iplayer is None:
-        print ("No corresponding Layer 3 Entries found")
+        print ("No corresponding Layer 3 Entries found,exiting")
+        return
     for vlan in iplayer.keys():
         for ipaddress in iplayer[vlan].keys():
             if re.match(r"\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}",ipaddress):
@@ -212,14 +263,56 @@ def Eth_Host_Check(dnac,dnac_core,host):
 
     return
 
+
+def Layer2Choose(dnac,dnac_core):
+    while True:
+        macaddress= input ("please give the mac address:")
+        if macaddress == "quit":
+            break
+        elif re.match(r".{4}\..{4}\..{4}",macaddress):
+            Eth_Host_Check(dnac,dnac_core,macaddress)
+        elif re.match(r"printit",macaddress):
+            print(dnac_core.printit())
+        else:
+            print("Please enter quit or mac address in xxxx.xxxx.xxxx format")
+
+
+def Menu(dnac,dnac_core):
+    Layer2Choose(dnac,dnac_core)
+
 def main(argv):
-    dnac=input ("DNAC IP address :")
-    username = input("username :")
-    password = getpass()
+    dnac = None
+    username = None
+    password = None
+    fabric = None
+    try:
+        opts, args = getopt.getopt(argv, "hd:u:p:f:", ["directory="])
+    except getopt.GetoptError:
+        print('SDA_Digger.py -d <DNAC IP> -u <username> -p <password> -f <fabric>')
+        sys.exit(2)
+    for opt, arg in opts:
+        if opt == '-h':
+            print('SDA_Digger.py -d <DNAC IP> -u <username> -p <password> -f <fabric>')
+            sys.exit()
+        elif opt == "-d":
+            dnac = arg
+        elif opt in ("-u"):
+            username = arg
+        elif opt in ("-p"):
+            password = arg
+        elif opt in ("-f"):
+            fabric = arg
+    if dnac is None:
+        dnac=input ("DNAC IP address :")
+    if username is None:
+        username = input("username :")
+    if password is None:
+        password = getpass()
     dnac = DNAC_Connector.DnacCon(dnac, username, password)
     dnac_core = AnalysisCore.Analysis_Core()
     build_hierarch(dnac,dnac_core)
-    Build_Lisp_Fabric(dnac,dnac_core)
+    Build_Lisp_Fabric(dnac,dnac_core,fabric)
+    Menu(dnac,dnac_core)
     while True:
         macaddress= input ("please give the mac address:")
         if macaddress == "quit":

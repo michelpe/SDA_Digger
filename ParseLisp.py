@@ -43,8 +43,12 @@ def LispMapCache(output, hostname,dnac_core):
                         dnac_core.add(["lisp", "map-cache", hostname, linstance, leid, tdict])
 
 
-def LispDatabase(output, hostname, AF,dnac_core):
-    splits = (splititup(output, "^[Oo]utput"))
+def LispDatabase(output, hostname, instance,AF,dnac_core):
+    splits=[]
+    if instance == "*":
+        splits = (splititup(output, "^[Oo]utput"))
+    else:
+        splits.append(output)
     for spli in splits:
         linstance = str.split(spli[0])[-1]
         leid = ""
@@ -64,7 +68,7 @@ def LispDatabase(output, hostname, AF,dnac_core):
                     elif re.match(r"^\d*\.\d*\.\d*\.\d*$", lsp[0]):
                         lestate = lsp[3:]
  #                       print (lsp)
-                        tdict = {"Conf":lsp[2],"Source": lsource,  "Dyn EID": ldrange, "State": lestate, "AF": AF, "RLOC":lsp[0]}
+                        tdict = {"Conf":lsp[2],"Source": lsource,  "Dyn EID": ldrange, "State": lestate, "AF": AF, "RLOC":lsp[0],"RAW":spli}
                         dnac_core.add(["lisp", "database", hostname, linstance, leid, tdict])
 
     return
@@ -78,7 +82,7 @@ def secsplit(s_plit):
         else:
             print(f"${line}")
 
-def LispDatabase1(output, hostname, AF,dnac_core):
+def LispDatabase2(output, hostname, instance,AF,dnac_core):
     splits = (splititup(output, "^[Oo]utput"))
     for spli in splits:
         linstance = str.split(spli[0])[-1]
@@ -86,10 +90,13 @@ def LispDatabase1(output, hostname, AF,dnac_core):
         secsplit(spli)
     quit()
 
-def LispDatabaseAR(output, hostname,dnac_core):
+def LispDatabaseAR(output, hostname,dnac_core,instance):
     tdict = dict()
     l2instance = 0
-    splits = (splititup(output, "^LISP ETR Address Resolution "))
+    if instance == "*":
+        splits = (splititup(output, "^LISP ETR Address Resolution "))
+    else:
+        splits = [output]
     for split in splits:
         l2instance = str.split(split[0])[-1]
         for line in split:
@@ -192,6 +199,7 @@ def LispEthServerAR(output, hostname,dnac_core):
 
 
 def lisp(output, key, hostname,dnac_core):
+    #print (key)
     if len(key) > 1:
         if re.match(r"session", key[1]):
             LispSession(output, hostname,dnac_core)
@@ -199,13 +207,13 @@ def lisp(output, key, hostname,dnac_core):
             LispSite(output, hostname,dnac_core)
         elif re.match(r"instance", key[1]):
             if len(key) >= 5:
-                if re.match(r"database", key[4]):
-                    if re.match(r"address-resolution", key[-2]):
-                        LispDatabaseAR(output, hostname,dnac_core)
-                    elif re.match(r"wlc", key[-1]):
+                if "database" in key:
+                    if "address-resolution" in key:
+                        LispDatabaseAR(output, hostname,dnac_core,key[2])
+                    elif "wlc" in key:
                         LispDatabaseWLC(output, hostname,dnac_core)
                     else:
-                        LispDatabase(output, hostname, key[3],dnac_core)
+                        LispDatabase(output, hostname,key[2],key[3],dnac_core)
                 elif re.match(r"map-cache", key[4]):
                     LispMapCache(output, hostname,dnac_core)
                 elif re.match(r"server", key[4]):

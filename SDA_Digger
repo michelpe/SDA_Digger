@@ -103,15 +103,16 @@ def check_fabric(fabric,dnac,dnac_core):
         i=i+1
         t=t+1
         if len(edges) >4 or i == len(edge):
-            for cmd in edge_cmd_list:
-                ret = dnac.command_run(cmd, edges)
-                for responses in ret:
-                    ParseCommands.ParseSingleDev(responses["output"], responses["host"], dnac_core)
-            print (f"Completed import on {t} edges , total imported {i}")
+            #for cmd in edge_cmd_list:
+            #   ret = dnac.command_run(cmd, edges)
+            #   for responses in ret:
+            #      ParseCommands.ParseSingleDev(responses["output"], responses["host"], dnac_core)
+            #print (f"Completed import on {t} edges , total imported {i}")
             t=0
             edges=[]
-    Analysis.DatabaseTooFabric(dnac,dnac_core)
-    Analysis.CPTooFabric(dnac,dnac_core)
+    #Analysis.DatabaseTooFabric(dnac,dnac_core)
+    #Analysis.CPTooFabric(dnac,dnac_core)
+    Analysis.CP2Fabric(dnac,dnac_core)
     return
 
 def Build_Lisp_Fabric(dnac,dnac_core,fabric):
@@ -278,7 +279,26 @@ def Layer2Choose(dnac,dnac_core):
 
 
 def Menu(dnac,dnac_core):
-    Layer2Choose(dnac,dnac_core)
+    while True:
+        print(f"\n\n\nPlease choose one of the following options:")
+        print(f"1: LISP Session analysis(under development)")
+        print(f"2: LISP Database consistency(under development)")
+        print(f"3: LISP Map cache consistency(under development)")
+        print(f"4: IP reachability checks (Underlay)(under development))")
+        print(f"5: Authentication and CTS enviroment checking(under development)")
+        print(f"6: Endpoint check by Layer 2 Address")
+        print(f"7: Endpoint check by Layer 3 Address(under development)")
+        print(f"8: FEW AccessPoint checks(under development)")
+        print(f"9: IP Multicast checks(under development)")
+        print(f"d: Dump Datastructures")
+        print(f"q: Quit")
+        choice = input("Choice:").lower()
+        if choice == "6":
+            Layer2Choose(dnac,dnac_core)
+        elif choice == "d":
+            print(dnac_core.printit())
+        elif choice == "q":
+            exit()
 
 def main(argv):
     dnac = None

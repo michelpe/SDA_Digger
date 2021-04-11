@@ -21,9 +21,13 @@ class DnacCon:
         self.connect= None
         self.fabric = ""
         time.localtime()
-        self.logdir = f"log{time.localtime().tm_mon}{time.localtime().tm_mday}{time.localtime().tm_hour}{time.localtime().tm_min}"
-        os.makedirs(self.logdir)
-        #print(self.token)
+        self.logdir = f"log{time.localtime().tm_mon}{time.localtime().tm_mday}_{time.localtime().tm_hour}{time.localtime().tm_min}"
+        if os.path.exists(self.logdir):
+            #directory already exists. appending outputs
+            pass
+        else:
+           os.makedirs(self.logdir)
+        print (f"Storing outputs in directory {os.path.join(os.getcwd(),self.logdir)}")
 
     def connect_dnac(self,http_action,http_url,http_headers):
         http_headers['X-auth-token']=self.token
@@ -135,7 +139,8 @@ class DnacCon:
         #print (payload)
         self.conn = http.client.HTTPSConnection(self.DNAC, context=ssl._create_unverified_context())
         resp = self.post("/dna/intent/api/v1/network-device-poller/cli/read-request",payload)
-        #print(resp)
+        if "response" not in resp.keys():
+         print(resp)
         tresp = self.geturl(resp["response"]["url"])
         while "endTime" not in tresp["response"].keys():
             time.sleep(1)

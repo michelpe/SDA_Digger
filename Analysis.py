@@ -134,8 +134,6 @@ def CheckCP():
                             LogIt(
                                 f"Error: Registrar {who} not part of captured info or invalid,unable to check {lispinst}:{eidsp} ",
                                 3)
-
-
                     else:
                         reger = dnac_core.get(["lisp", "database", own["Hostname"], lispinst, eidsp])
                         if reger is None:
@@ -529,6 +527,7 @@ def DatabaseTooFabric(dnac, dnac_core):
     stateids = 0
     statfail = 0
     lispdb = dnac_core.get(["lisp", "database"])
+    print (lispdb)
     if lispdb is None:
         LogIt(
             f"Error: No LISP Database entries found to parse", 1)
@@ -546,9 +545,10 @@ def DatabaseTooFabric(dnac, dnac_core):
                 if eidinfo is None:
                     print("Error! what to do , what to do, we have an error. Panic!!!!!!")
                 else:
-                    eidsource=eidinfo["Source"][-1]
-                    eidtype=eidinfo["Source"][0]
-                    rloc = eidinfo["RLOC"]
+                    eidsource=eidinfo["eSource"]
+                    eidtype=eidinfo["eSource"]
+                    rloc = eidinfo["RLOC"][0]
+                    print (f"{rloc.keys()} {eidtype} {eidsource} {edgeeid}")
                     eidtest=dnac_core.get(["fabric", edgeinstance, edgeeid])
                     local_macs = dnac_core.get(["lisp", "svi_interface", edgename])
                     if local_macs is None:
@@ -565,7 +565,7 @@ def DatabaseTooFabric(dnac, dnac_core):
                            deids = deids +1
                        elif eidtype == "route-import,":
                            ieids = ieids + 1
-                       elif eidinfo["Conf"]=="cfg-intf":
+                       elif re.match(r"^other.*",eidtype):
                             leids = leids + 1
                        stateids = stateids + 1
                     elif eidtest is 'local':
@@ -598,7 +598,9 @@ def CPTooFabric(dnac,dnac_core):
                     state = instanceinfo[eidsp]["Status"]
                     #print (f"{eidsp} {lispinst} {who}")
                     dbinfo = dnac_core.get(["fabric",lispinst,eidsp])
-                    if dbinfo is None:
+                    if who == "--":
+                        pass
+                    elif dbinfo is None:
                         if re.match(r"yes",state):
                             LogIt(f"Notice:{eidsp} in {lispinst} not found in analyzed lisp databases, RLOC is {who}",11)
                         else:
@@ -610,35 +612,34 @@ def CPTooFabric(dnac,dnac_core):
                            print(f"CP Analysis:CP {nodes} reporting for {eidsp}:{lispinst} RLOC {who} but is present on  {dbinfo['RLOC']}")
 
 
+def CP2Fabric(dnac,dnac_core):
+    CPnodes = dnac_core.get(["lisp", "site"])
+    if CPnodes is None:
+        LogIt(
+            f"Error: No LISP Control Plane Information found ,parsing results may be inconclusive", 1)
+        return
+    statecps = 0
+    cpfabric = {}
+    allid = set()
+    for ar in CPnodes.keys():
+        areid = CPnodes[ar]
+        for nodes in areid.keys():
+            node = areid[nodes]
+            statecps = statecps + 1
+            for lispinst in node.keys():
+                instanceinfo = node[lispinst]
+                for eidsp in instanceinfo.keys():
+                    who = instanceinfo[eidsp]["Last Register"].split(':')[0]
+                    state = instanceinfo[eidsp]["Status"]
+                    #print (f"{eidsp} {lispinst} {who}{state}")
+                    dnac_core.add(
+                        ["fabric", lispinst, eidsp, {"RLOC": who,"state":state}])
+    return
+
 def BuildFabric(dnac, dnac_core):
  #   findip()
     print("*"*80)
     DatabaseTooFabric(dnac, dnac_core)
     print("*" * 80)
     CPTooFabric(dnac, dnac_core)
- #   print("*"*80)
- #   BuildWireless()
- #   CheckCP()
- #   print("*"*80)
- #   CheckEdgeDB()
- #   print("*" * 80)
- #   CheckEdgeMC()
- #   print("*" * 80)
- #   CheckRLOCreach()
- #   print("*" * 80)
- #   CheckLispSession()
- #   print("*" * 80)
- #   CheckAccessTunnels()
- #   print("*" * 80)
- #   checkcts()
- #   print("*" * 80)
- #   checksvi()
- #   print("*" * 80)
- #   check_dt()
- #   print("*" * 80)
- #   check_MTU()
- #   print("*" * 80)
- #   check_auth()
- #   print("*" * 80)
- #   Stats()
     return

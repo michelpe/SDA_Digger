@@ -43,7 +43,7 @@ def LispMapCache(output, hostname,dnac_core):
                         dnac_core.add(["lisp", "map-cache", hostname, linstance, leid, tdict])
 
 
-def LispDatabase(output, hostname, instance,AF,dnac_core):
+def LispDatabase1(output, hostname, instance,AF,dnac_core):
     splits=[]
     if instance == "*":
         splits = (splititup(output, "^[Oo]utput"))
@@ -68,27 +68,56 @@ def LispDatabase(output, hostname, instance,AF,dnac_core):
                     elif re.match(r"^\d*\.\d*\.\d*\.\d*$", lsp[0]):
                         lestate = lsp[3:]
  #                       print (lsp)
-                        tdict = {"Conf":lsp[2],"Source": lsource,  "Dyn EID": ldrange, "State": lestate, "AF": AF, "RLOC":lsp[0],"RAW":spli}
+                        tdict = {"Conf":lsp[2],"Source": lsource,  "Dyn EID": ldrange, "State": lestate, "AF": AF, "RLOC":lsp[0]}
                         dnac_core.add(["lisp", "database", hostname, linstance, leid, tdict])
 
     return
 
-def secsplit(s_plit):
-    for line in spli:
-        if re.match(r"^\s", line):
-            print(f"*{line}")
-        elif re.match(r"\S", line):
-            print(f"+{line}")
-        else:
-            print(f"${line}")
 
-def LispDatabase2(output, hostname, instance,AF,dnac_core):
-    splits = (splititup(output, "^[Oo]utput"))
-    for spli in splits:
-        linstance = str.split(spli[0])[-1]
-        leid = ""
-        secsplit(spli)
-    quit()
+
+def LispDatabase(output, hostname, instance,AF,dnac_core):
+    rloc = []
+    set = {}
+    tdict = {}
+    eid = None
+    next_ip = ""
+    for lines in output:
+        splitline=lines.split()
+        if re.match(r"^Output",lines):
+            instance = splitline[-1]
+        elif re.match(r".*locator-set.*",lines):
+            if eid is not None:
+                dnac_core.add(["lisp", "database", hostname, instance, eid, tdict])
+                eid = None
+                next_ip = ""
+                tset = {}
+                break
+            eid = splitline[0]
+            if splitline[1] == "route-import":
+                tdict["eSource"]="route-import"
+            elif splitline[1] == "import":
+                tdict["eSource"]="site-registration"
+            elif splitline[1] == "dynamic-eid":
+                tdict["eSource"]="dynamic-eid"
+            else:
+                tdict["eSource"]=f"other {splitline[1:]}"
+        elif re.match(r"^ ",lines):
+                if re.match(r"^\d*\.\d*\.\d*\.\d*$",splitline[0]):
+                   if next_ip == "Server":
+                       server = splitline[0]
+                   else:
+                       rloc.append({splitline[0]:{"Conf":splitline[2],"rSource":splitline[3:]}})
+                       tdict["RLOC"]=rloc
+
+        elif re.match(r"^ Locator",lines):
+            next_ip = "Locator"
+        else:
+            tdict["Other"]=lines
+    if eid is not None:
+        dnac_core.add(["lisp", "database", hostname, instance, eid, tdict])
+    return
+
+
 
 def LispDatabaseAR(output, hostname,dnac_core,instance):
     tdict = dict()

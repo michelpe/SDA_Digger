@@ -20,7 +20,7 @@ class Analysis_Core:
             else:
                 tdt[clist[0]] = {clist[1]: {}}
         if len(clist) > 2:
-            nesting(tdt[clist[0]], clist[1:])
+            self.nesting(tdt[clist[0]], clist[1:])
         else:
             tdt[clist[0]] = clist[1]
         return

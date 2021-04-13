@@ -12,9 +12,10 @@ def build_edge_list():
     if devices is None:
         return edge_list
     for device in devices.keys():
-        if devices[device]["Border"] == False and devices[device]["CP"] == False and devices[device]["XTR"] == True:
+        if devices[device]["Border"] is False and devices[device]["CP"] is False and devices[device]["XTR"] is True:
             edge_list.append(device)
     return edge_list
+
 
 def build_fabric_list():
     devices = dnac_core.get(["lisp", "roles"])
@@ -182,18 +183,19 @@ def CheckEdgeDB():
                 statteids = statteids + 1
                 if cpinfo is None:
                     if 'skip' not in lispdb.get(edgename).get(edgeinstance).get(edgeeid).get(edgeip).get("Source"):
-                        local_macs=dnac_core.get(["lisp","svi_interface",edgename])
-                        local_addr=[]
+                        local_macs = dnac_core.get(["lisp", "svi_interface", edgename])
+                        local_addr = []
                         for locals in local_macs:
                             for vals in local_macs[locals].keys():
                                 local_addr.append(local_macs[locals][vals])
                         if edgeeid.split('/')[0] in local_addr:
-                           LogIt(
-                               f"Warning: {edgename} {edgeinstance} {edgeeid } {edgeinstanceaf} not present on CP nodes, is local address",
-                               10)
+                            LogIt(
+                                f"Warning: {edgename} {edgeinstance} {edgeeid} {edgeinstanceaf} not present on CP nodes, is local address",
+                                10)
                         else:
-                           print(f"Database Analysis:{edgename} has {edgeinstance} {edgeeid} {edgeinstanceaf} , not present on CP nodes ")
-                           statfail = statfail + 1
+                            print(
+                                f"Database Analysis:{edgename} has {edgeinstance} {edgeeid} {edgeinstanceaf} , not present on CP nodes ")
+                            statfail = statfail + 1
                 else:
                     if edgeip in cpinfo:
                         LogIt(
@@ -212,7 +214,7 @@ def CheckEdgeDB():
 
 def CheckEdgeMC():
     lispmc = dnac_core.get(["lisp", "map-cache"])
-    #print(lispmc)
+    # print(lispmc)
     statdevs = 0
     statteids = 0
     stateids = 0
@@ -233,7 +235,7 @@ def CheckEdgeMC():
                 statteids = statteids + 1
                 if lispmc[edgename][edgeinstance][mcentry]["State"] == "complete":
                     stateids = stateids + 1
-                    cpinfo = dnac_core.get(["fabric", edgeinstance, mcentry,"RLOC"])
+                    cpinfo = dnac_core.get(["fabric", edgeinstance, mcentry, "RLOC"])
                     if cpinfo is None:
                         print(
                             f"Map Cache Analysis : Device:{edgename} reporting {edgeinstance}:{mcentry} with RLOC {lispmc[edgename][edgeinstance][mcentry]['RLOC']}" +
@@ -251,10 +253,10 @@ def CheckEdgeMC():
                                 f"Map Cache Analysis : Device:{edgename} reporting {edgeinstance}:{mcentry} with RLOC {lispmc[edgename][edgeinstance][mcentry]['RLOC']} in map cache inconsistent with CP info RLOC  {cpinfo}")
                             statfail = statfail + 1
                 elif lispmc[edgename][edgeinstance][mcentry]["State"] == "drop":
-                    #print(f"{lispmc[edgename][edgeinstance][mcentry]}   {mcentry}")
+                    # print(f"{lispmc[edgename][edgeinstance][mcentry]}   {mcentry}")
                     pass
                 elif re.match(r"^Negative", lispmc[edgename][edgeinstance][mcentry]['RLOC']):
-                    #print(f"{lispmc[edgename][edgeinstance][mcentry]}   {mcentry}")
+                    # print(f"{lispmc[edgename][edgeinstance][mcentry]}   {mcentry}")
                     pass
     LogIt(
         f"Map Cache Analysis : Found {statteids} entries, verified {stateids} entry on {statdevs} devices with {statfail} failures",
@@ -327,35 +329,46 @@ def CheckRLOCreach():
     return
 
 
-def CheckLispSession():
-    devices = dnac_core.get(["lisp", "roles"])
-    if devices is None:
-        return
-    cpnodes = []
-    fabricdevs = []
+def CheckLispSession(dnac,dnac_core):
+    edgenodes = dnac_core.get(["devices", dnac.fabric, "EDGENODE"])
+    borders = dnac_core.get(["devices", dnac.fabric, "BORDERNODE"])
+    cpnodes = dnac_core.get(["devices", dnac.fabric, "MAPSERVER"])
+    devices = []
+    cp_nodes = []
+    if cpnodes is None:
+        print (f"no devices found in fabric {dnac.fabric} exiting")
+        exit()
+    for cp in cpnodes:
+        #print (cpnodes[cp]["name"])
+        cp_nodes.append(cpnodes[cp]["name"])
+    for border in borders:
+        #print(borders[border]["name"])
+        devices.append(borders[border]["name"])
+    for edge in edgenodes:
+        #print(edgenodes[edge]["name"])
+        devices.append(edgenodes[edge]["name"])
     esession = fsession = fails = 0
-    for fabricdev in devices.keys():
-        if devices[fabricdev]['CP']:
-            cpnodes.append(IP2name(fabricdev))
-        if devices[fabricdev]['Border'] or devices[fabricdev]['XTR']:
-            fabricdevs.append(fabricdev)
-    for device in fabricdevs:
+    for device in set(devices):
         sesdb = dnac_core.get(['lisp', 'session', device]).keys()
         for session in cpnodes:
+            cpname = dnac_core.get(['devices',dnac.fabric,'MAPSERVER',session])["name"]
             if session not in sesdb:
-                print(f"Session Analysis: CP session to  {session} not present on  {device}")
-                fsession = fsession + 1
+                if cpname == device:
+                    pass
+                else:
+                    fsession = fsession + 1
+                    print(f"Session Analysis: CP session to {cpname} not present on {device}")
             else:
+                print(f"Session Analysis: CP session to {cpname} present on {device}")
                 esession = esession + 1
-            if dnac_core.get(['lisp','session',device]).get(session).get('status') == "Down":
-                 if dnac_core.get(['lisp','database',device]) is None:
-                     LogIt(f"Informaal:Session Down on device {device} but no Database entries found",10)
-                 else:
-                     print(f"Session Analysis: {device} has LISP session in Down state with Database Entries present")
-                     fails = fails +1
-
+                if dnac_core.get(['lisp', 'session', device]).get(session).get('status') == "Down":
+                    if dnac_core.get(['lisp', 'database', device]) is None:
+                        print(f"Informational:Session Down on device {device} but no Database entries found")
+                    else:
+                        print(f"Session Analysis: {device} has LISP session in Down state to {cpname} with Database Entries present")
+                        fails = fails + 1
     print(
-        f"Session Analysis: Checked LISP sessions on {len(fabricdevs)} nodes towards {len(cpnodes)} CP nodes. Found {esession} sessions, missing {fsession}, failures {fails}")
+        f"Session Analysis: Checked LISP sessions on {len(devices)} nodes towards {len(cpnodes)} CP nodes. Found {esession} sessions, missing {fsession}, failures {fails}")
     return
 
 
@@ -381,9 +394,10 @@ def CheckAccessTunnels():
         f"and {faileddevice} nodes with failures")
     return
 
+
 def checkcts():
-    ctsdevs = ctsfailed =0
-    ctsinfo =  dnac_core.get(["Authentication", "CTS", "Devices"])
+    ctsdevs = ctsfailed = 0
+    ctsinfo = dnac_core.get(["Authentication", "CTS", "Devices"])
     if ctsinfo is None:
         return
     for ctsdevice in ctsinfo.keys():
@@ -393,21 +407,22 @@ def checkcts():
             pass
         else:
             print(f"CTS Enviroment error: CTS enviroment data not complete on {ctsdevice} state is {state}")
-            ctsfailed = ctsfailed +1
+            ctsfailed = ctsfailed + 1
     print(
         f"CTS Analysis: verified CTS on {ctsdevs} nodes, {ctsfailed} failures found")
     return
+
 
 def checksvi():
     devices = dnac_core.get(["lisp", "roles"])
     good_svi = bad_svi = 0
     if devices is None:
         return
-    edgelist=[]
-    svilist=[]
+    edgelist = []
+    svilist = []
     for device in devices.keys():
         if devices[device]["Border"] == False and devices[device]["CP"] == False and devices[device]["XTR"] == True:
-            svi_info= dnac_core.get(["lisp", "svi_interface", device])
+            svi_info = dnac_core.get(["lisp", "svi_interface", device])
             for svi in svi_info.keys():
                 svilist.append(json.dumps(svi_info))
             edgelist.append(device)
@@ -415,34 +430,38 @@ def checksvi():
     for device in edgelist:
         svi_info = dnac_core.get(["lisp", "svi_interface", device])
         if json.dumps(svi_info) == best_svi:
-            good_svi=good_svi+1
+            good_svi = good_svi + 1
         else:
-            print(f"SVI Analysis: Device {device} has inconsistent Interface Vlan configuration with all other edge devices")
-            bad_svi=bad_svi+1
+            print(
+                f"SVI Analysis: Device {device} has inconsistent Interface Vlan configuration with all other edge devices")
+            bad_svi = bad_svi + 1
     print(f"SVI Analysis: Analyzed Interface Vlan config on {bad_svi + good_svi} , found inconsistency on {bad_svi} ")
     return
 
-def check_locals(svi,sifs,device):
-    succes=mismatch=notfound=0
-    local_svis={}
-    local_sifs={}
+
+def check_locals(svi, sifs, device):
+    succes = mismatch = notfound = 0
+    local_svis = {}
+    local_sifs = {}
     for vlans in sifs.keys():
-     for IPs in sifs[vlans].keys():
-         if sifs[vlans][IPs]["source"] =="L":
-             local_sifs[vlans]={"mac":sifs[vlans][IPs]["mac"],"IP":IPs}
+        for IPs in sifs[vlans].keys():
+            if sifs[vlans][IPs]["source"] == "L":
+                local_sifs[vlans] = {"mac": sifs[vlans][IPs]["mac"], "IP": IPs}
     for svis in svi.keys():
-        svi_id=re.findall(r"\d{4}$",svis)[0]
+        svi_id = re.findall(r"\d{4}$", svis)[0]
         local_sifs.get(svi_id)
         if local_sifs.get(svi_id) is None:
             print(f"Device-tracking analysis: No Device-Tracking local entry for SVI Vlan{svi_id} on {device}")
-            notfound=notfound+1
+            notfound = notfound + 1
         else:
             if local_sifs.get(svi_id)["mac"] == svi[f"Vlan{svi_id}"]["mac"]:
-                succes=succes+1
+                succes = succes + 1
             else:
-                print(f"Device-tracking analysis: Mismatch between Device Tracking and SVI configuration for Vlan{svi_id} on {device}")
-                mismatch=mismatch+1
-    return succes,notfound,mismatch
+                print(
+                    f"Device-tracking analysis: Mismatch between Device Tracking and SVI configuration for Vlan{svi_id} on {device}")
+                mismatch = mismatch + 1
+    return succes, notfound, mismatch
+
 
 def check_dt():
     devices = build_edge_list()
@@ -450,25 +469,27 @@ def check_dt():
     total_succes = total_mismatch = total_notfound = 0
     for device in devices:
         svi_info = dnac_core.get(["lisp", "svi_interface", device])
-        dt_info = dnac_core.get(["Global","Device-tracking",device])
+        dt_info = dnac_core.get(["Global", "Device-tracking", device])
         if svi_info is None or dt_info is None:
             print(f"Device-tracking analysis:missing info to validate SVI to Device-Tracking for node: {device}")
-            mismatch=succes=0
-            notfound=1
+            mismatch = succes = 0
+            notfound = 1
         else:
-            succes,notfound,mismatch=check_locals(svi_info,dt_info,device)
-        total_succes=total_succes+succes
-        total_notfound=notfound+total_notfound
-        total_mismatch=mismatch+total_mismatch
-    print(f"Device-tracking analysis: Verified {len(devices)} edge devices with SVI info, {total_succes} success, {total_mismatch} mismatches {total_notfound} info missing")
+            succes, notfound, mismatch = check_locals(svi_info, dt_info, device)
+        total_succes = total_succes + succes
+        total_notfound = notfound + total_notfound
+        total_mismatch = mismatch + total_mismatch
+    print(
+        f"Device-tracking analysis: Verified {len(devices)} edge devices with SVI info, {total_succes} success, {total_mismatch} mismatches {total_notfound} info missing")
     return
 
+
 def check_MTU():
-    mtus=[]
-    badmtu=goodmtu=0
+    mtus = []
+    badmtu = goodmtu = 0
     devices = build_fabric_list()
     for device in devices:
-        MTU=dnac_core.get(["Global", "MTU", device])
+        MTU = dnac_core.get(["Global", "MTU", device])
         if MTU is None:
             print(f"MTU Analysis: System MTU not configured on device {device}")
         else:
@@ -477,46 +498,49 @@ def check_MTU():
     if int(best_mtu) < 2000:
         print(f"MTU Analysis: System MTU {best_mtu} used in fabric lower then 2000")
     for device in devices:
-        MTU=dnac_core.get(["Global", "MTU", device])
+        MTU = dnac_core.get(["Global", "MTU", device])
         if MTU is not None:
             if MTU["MTU"] == best_mtu:
-                goodmtu=goodmtu+1
+                goodmtu = goodmtu + 1
             else:
-                badmtu=badmtu+1
-                print(f"MTU Analysis: System MTU on device {device} is {MTU['MTU']} inconsistent with most used MTU {best_mtu}")
-    print(f"MTU Analysis: System MTU in fabric {best_mtu}, configured on {goodmtu} devices, misconfigured on {badmtu} devices")
+                badmtu = badmtu + 1
+                print(
+                    f"MTU Analysis: System MTU on device {device} is {MTU['MTU']} inconsistent with most used MTU {best_mtu}")
+    print(
+        f"MTU Analysis: System MTU in fabric {best_mtu}, configured on {goodmtu} devices, misconfigured on {badmtu} devices")
 
 
 def check_auth():
-    apipa=noip=okip=total=not_authenticated=0
+    apipa = noip = okip = total = not_authenticated = 0
     auth_db = dnac_core.get(["Global", "Authentication"])
     if auth_db is None:
         return
     for device in auth_db.keys():
         for interface in auth_db[device].keys():
-           for mac in auth_db[device][interface].keys():
-               if auth_db[device][interface][mac].get("Status") == "Authorized" \
-                       or ((auth_db[device][interface][mac].get("Status") == "Unauthorized") and
-                           (re.match(r".*Open",auth_db[device][interface][mac].get("Current Policy")))):
-                   total = total +1
-                   ipv4=auth_db[device][interface][mac].get("IPv4 Address")
-                   ipv6=auth_db[device][interface][mac].get("IPv6 Address")
-                   if ipv4 == "Unknown":
-                       print(f"Authentication Analysis: client {mac} on {interface} {device} not showing an IPv4 Address" )
-                       noip = noip =1
-                   elif re.match(r"169.254",ipv4):
-                       print(f"Authentication Analysis: client {mac} on {interface} {device} using an APIPA IPv4 Address")
-                       apipa = apipa + 1
-                   else:
-                       okip =okip+1
-               else :
-                    not_authenticated=not_authenticated + 1
-    print (f"Authentication Analysis: Verified {total} sessions on {len(auth_db.keys())} edges",
-           f"found {okip} sessions, {noip} without an IP address and {apipa} with an APIPA IP address")
-    print (f"Authentication Analysis: Found {not_authenticated} Failed Authentication sessions")
+            for mac in auth_db[device][interface].keys():
+                if auth_db[device][interface][mac].get("Status") == "Authorized" \
+                        or ((auth_db[device][interface][mac].get("Status") == "Unauthorized") and
+                            (re.match(r".*Open", auth_db[device][interface][mac].get("Current Policy")))):
+                    total = total + 1
+                    ipv4 = auth_db[device][interface][mac].get("IPv4 Address")
+                    ipv6 = auth_db[device][interface][mac].get("IPv6 Address")
+                    if ipv4 == "Unknown":
+                        print(
+                            f"Authentication Analysis: client {mac} on {interface} {device} not showing an IPv4 Address")
+                        noip = noip = 1
+                    elif re.match(r"169.254", ipv4):
+                        print(
+                            f"Authentication Analysis: client {mac} on {interface} {device} using an APIPA IPv4 Address")
+                        apipa = apipa + 1
+                    else:
+                        okip = okip + 1
+                else:
+                    not_authenticated = not_authenticated + 1
+    print(f"Authentication Analysis: Verified {total} sessions on {len(auth_db.keys())} edges",
+          f"found {okip} sessions, {noip} without an IP address and {apipa} with an APIPA IP address")
+    print(f"Authentication Analysis: Found {not_authenticated} Failed Authentication sessions")
 
     return
-
 
 
 def DatabaseTooFabric(dnac, dnac_core):
@@ -527,7 +551,7 @@ def DatabaseTooFabric(dnac, dnac_core):
     stateids = 0
     statfail = 0
     lispdb = dnac_core.get(["lisp", "database"])
-    print (lispdb)
+    print(lispdb)
     if lispdb is None:
         LogIt(
             f"Error: No LISP Database entries found to parse", 1)
@@ -541,15 +565,15 @@ def DatabaseTooFabric(dnac, dnac_core):
             else:
                 edgeinstanceaf = "ip"
             for edgeeid in lispdb.get(edgename).get(edgeinstance).keys():
-                eidinfo= dnac_core.get(["lisp","database",edgename,edgeinstance, edgeeid])
+                eidinfo = dnac_core.get(["lisp", "database", edgename, edgeinstance, edgeeid])
                 if eidinfo is None:
                     print("Error! what to do , what to do, we have an error. Panic!!!!!!")
                 else:
-                    eidsource=eidinfo["eSource"]
-                    eidtype=eidinfo["eSource"]
+                    eidsource = eidinfo["eSource"]
+                    eidtype = eidinfo["eSource"]
                     rloc = eidinfo["RLOC"][0]
-                    print (f"{rloc.keys()} {eidtype} {eidsource} {edgeeid}")
-                    eidtest=dnac_core.get(["fabric", edgeinstance, edgeeid])
+                    print(f"{rloc.keys()} {eidtype} {eidsource} {edgeeid}")
+                    eidtest = dnac_core.get(["fabric", edgeinstance, edgeeid])
                     local_macs = dnac_core.get(["lisp", "svi_interface", edgename])
                     if local_macs is None:
                         local_macs = []
@@ -560,24 +584,28 @@ def DatabaseTooFabric(dnac, dnac_core):
                     if edgeeid.split('/')[0] in local_addr:
                         eidtest = 'local'
                     if eidtest is None:
-                       dnac_core.add(["fabric", edgeinstance, edgeeid, {"RLOC":rloc,"source":eidsource,"type":eidtype}])
-                       if eidtype == "dynamic-eid":
-                           deids = deids +1
-                       elif eidtype == "route-import,":
-                           ieids = ieids + 1
-                       elif re.match(r"^other.*",eidtype):
+                        dnac_core.add(
+                            ["fabric", edgeinstance, edgeeid, {"RLOC": rloc, "source": eidsource, "type": eidtype}])
+                        if eidtype == "dynamic-eid":
+                            deids = deids + 1
+                        elif eidtype == "route-import,":
+                            ieids = ieids + 1
+                        elif re.match(r"^other.*", eidtype):
                             leids = leids + 1
-                       stateids = stateids + 1
+                        stateids = stateids + 1
                     elif eidtest is 'local':
                         pass
                     else:
-                       LogIt(f"Debug:LISP Database Analysis: Duplicate Entry {edgeeid} {edgeinstance} on {rloc},likely SVI IP and Mac, to be improved soon!",10)
-                       statfail = statfail +1
-    print (f"LISP Database Analysis: Parsed {statfail+stateids} entries with {statfail} failures")
+                        LogIt(
+                            f"Debug:LISP Database Analysis: Duplicate Entry {edgeeid} {edgeinstance} on {rloc},likely SVI IP and Mac, to be improved soon!",
+                            10)
+                        statfail = statfail + 1
+    print(f"LISP Database Analysis: Parsed {statfail + stateids} entries with {statfail} failures")
     print(f"LISP Database Analysis: {deids} Dynamic eids, {ieids} imported eids, {leids} local configured eids")
     return
 
-def CPTooFabric(dnac,dnac_core):
+
+def CPTooFabric(dnac, dnac_core):
     CPnodes = dnac_core.get(["lisp", "site"])
     if CPnodes is None:
         LogIt(
@@ -596,23 +624,25 @@ def CPTooFabric(dnac,dnac_core):
                 for eidsp in instanceinfo.keys():
                     who = instanceinfo[eidsp]["Last Register"].split(':')[0]
                     state = instanceinfo[eidsp]["Status"]
-                    #print (f"{eidsp} {lispinst} {who}")
-                    dbinfo = dnac_core.get(["fabric",lispinst,eidsp])
+                    # print (f"{eidsp} {lispinst} {who}")
+                    dbinfo = dnac_core.get(["fabric", lispinst, eidsp])
                     if who == "--":
                         pass
                     elif dbinfo is None:
-                        if re.match(r"yes",state):
-                            LogIt(f"Notice:{eidsp} in {lispinst} not found in analyzed lisp databases, RLOC is {who}",11)
+                        if re.match(r"yes", state):
+                            LogIt(f"Notice:{eidsp} in {lispinst} not found in analyzed lisp databases, RLOC is {who}",
+                                  11)
                         else:
-                            LogIt(f"Debug:{eidsp} in {lispinst} not found state is {state},ignoring",11)
+                            LogIt(f"Debug:{eidsp} in {lispinst} not found state is {state},ignoring", 11)
                     else:
-                       if who == dbinfo['RLOC']:
-                           LogIt(f"Debug:{eidsp} {lispinst} {who} matches RLOC in LISP DB on {dbinfo['RLOC']}",20)
-                       else:
-                           print(f"CP Analysis:CP {nodes} reporting for {eidsp}:{lispinst} RLOC {who} but is present on  {dbinfo['RLOC']}")
+                        if who == dbinfo['RLOC']:
+                            LogIt(f"Debug:{eidsp} {lispinst} {who} matches RLOC in LISP DB on {dbinfo['RLOC']}", 20)
+                        else:
+                            print(
+                                f"CP Analysis:CP {nodes} reporting for {eidsp}:{lispinst} RLOC {who} but is present on  {dbinfo['RLOC']}")
 
 
-def CP2Fabric(dnac,dnac_core):
+def CP2Fabric(dnac, dnac_core):
     CPnodes = dnac_core.get(["lisp", "site"])
     if CPnodes is None:
         LogIt(
@@ -631,14 +661,15 @@ def CP2Fabric(dnac,dnac_core):
                 for eidsp in instanceinfo.keys():
                     who = instanceinfo[eidsp]["Last Register"].split(':')[0]
                     state = instanceinfo[eidsp]["Status"]
-                    #print (f"{eidsp} {lispinst} {who}{state}")
+                    # print (f"{eidsp} {lispinst} {who}{state}")
                     dnac_core.add(
-                        ["fabric", lispinst, eidsp, {"RLOC": who,"state":state}])
+                        ["fabric", lispinst, eidsp, {"RLOC": who, "state": state}])
     return
 
+
 def BuildFabric(dnac, dnac_core):
- #   findip()
-    print("*"*80)
+    #   findip()
+    print("*" * 80)
     DatabaseTooFabric(dnac, dnac_core)
     print("*" * 80)
     CPTooFabric(dnac, dnac_core)

@@ -5,9 +5,10 @@ import json
 import time
 import os
 
+
 class DnacCon:
     server = None
-    username= None
+    username = None
     password = None
     token = None
     logdir = None
@@ -17,42 +18,43 @@ class DnacCon:
         self.username = user
         self.password = pword
         self.get_token()
-        self.topo={}
-        self.connect= None
+        self.topo = {}
+        self.connect = None
         self.fabric = ""
         time.localtime()
-        self.logdir = f"log{time.localtime().tm_mon}{time.localtime().tm_mday}_{time.localtime().tm_hour}{time.localtime().tm_min}"
+        self.logdir = f"log{time.localtime().tm_mon}{time.localtime().tm_mday}_{time.localtime().tm_hour}" \
+                      f"{time.localtime().tm_min}"
         if os.path.exists(self.logdir):
-            #directory already exists. appending outputs
+            # directory already exists. appending outputs
             pass
         else:
-           os.makedirs(self.logdir)
-        print (f"Storing outputs in directory {os.path.join(os.getcwd(),self.logdir)}")
+            os.makedirs(self.logdir)
+        print(f"Storing outputs in directory {os.path.join(os.getcwd(), self.logdir)}")
 
-    def connect_dnac(self,http_action,http_url,http_headers):
-        http_headers['X-auth-token']=self.token
-        #print (http_headers)
+    def connect_dnac(self, http_action, http_url, http_headers):
+        http_headers['X-auth-token'] = self.token
+        # print (http_headers)
         return
 
     def get_token(self):
-        self.token=None
-        authraw=self.username+":"+self.password
-        auth64=base64.b64encode(authraw.encode("utf-8")).decode("utf-8")
+        self.token = None
+        authraw = self.username + ":" + self.password
+        auth64 = base64.b64encode(authraw.encode("utf-8")).decode("utf-8")
 
         try:
-            self.conn = http.client.HTTPSConnection(self.DNAC,context = ssl._create_unverified_context())
+            self.conn = http.client.HTTPSConnection(self.DNAC, context=ssl._create_unverified_context())
         except:
             print(f"error connecting to server {self.DNAC}")
             exit()
 
         headers = {
-         'content-type': "application/json",
-         'authorization': f"Basic {auth64}"
+            'content-type': "application/json",
+            'authorization': f"Basic {auth64}"
         }
         try:
-            #print(headers)
+            # print(headers)
             self.conn.request("POST", f"https://{self.DNAC}/api/system/v1/auth/token", headers=headers)
-            #print (headers)
+            # print (headers)
         except:
             print(f"Error connecting to server {self.DNAC}, exiting")
             exit()
@@ -61,116 +63,117 @@ class DnacCon:
 
         if res.status == 200:
             data = json.loads(res.read())
-            self.token=data["Token"]
+            self.token = data["Token"]
             print(f"Connection established to {self.DNAC}")
         elif res.status == 401:
             print(f"Incorrect Username/Password supplied, unable to login to DNAC")
             print(res.status)
             exit(0)
         else:
-            print (f"Error {res.status} encountered when trying to retrieve token")
+            print(f"Error {res.status} encountered when trying to retrieve token")
             exit(0)
-        self.connect_dnac("t","t",headers)
+        self.connect_dnac("t", "t", headers)
         return
 
     def open_channel(self):
         if self.token is None:
-           self.get_token()
+            self.get_token()
         return
 
-    def geturl(self,url):
+    def geturl(self, url):
         headers = {
             'content-type': "application/json",
             'x-auth-token': self.token
         }
         realurl = f"https://{self.DNAC}{url}"
         try:
-            #conn = http.client.HTTPSConnection(self.DNAC, context=ssl._create_unverified_context())
+            # conn = http.client.HTTPSConnection(self.DNAC, context=ssl._create_unverified_context())
             self.conn.request("GET", realurl, headers=headers)
-            #print (realurl)
+            # print (realurl)
         except:
             print(f"Error connecting to server {self.DNAC}, exiting")
             exit()
         while True:
             try:
-               res = self.conn.getresponse()
+                res = self.conn.getresponse()
             except:
-               self.conn = http.client.HTTPSConnection(self.DNAC, context=ssl._create_unverified_context())
-               self.conn.request("GET", realurl, headers=headers)
-               print(f"Reopening https connection")
+                self.conn = http.client.HTTPSConnection(self.DNAC, context=ssl._create_unverified_context())
+                self.conn.request("GET", realurl, headers=headers)
+                print(f"Reopening https connection")
             else:
-               #print (res.status)
+                # print (res.status)
                 if res.status == 404:
                     ret = (res.read())
-                    print (f"Internal Error encountered {ret} (bapi errors often resolved by disabling/enabling the RESTAPI bundle under platform/manager")
+                    print(
+                        f"Internal Error encountered {ret} (bapi errors often resolved by disabling/enabling the RESTAPI bundle under platform/manager")
                 elif res.status == 429:
-                     print(f"Exceeded limit for API calls calling {url}, pausing for 60 seconds")
-                     time.sleep(60)
-                     print(f"Reopening https connection to {self.DNAC} after pausing")
-                     self.conn = http.client.HTTPSConnection(self.DNAC, context=ssl._create_unverified_context())
-                     self.conn.request("GET", realurl, headers=headers)
+                    print(f"Exceeded limit for API calls calling {url}, pausing for 60 seconds")
+                    time.sleep(60)
+                    print(f"Reopening https connection to {self.DNAC} after pausing")
+                    self.conn = http.client.HTTPSConnection(self.DNAC, context=ssl._create_unverified_context())
+                    self.conn.request("GET", realurl, headers=headers)
                 elif res.status > 299:
-                    print(f"{res.status} error encountered when trying to get {url}" )
+                    print(f"{res.status} error encountered when trying to get {url}")
                     print(f"{res.read()}")
                     exit(0)
                 else:
                     break
         return json.loads(res.read())
 
-    def post(self,url,payload):
-        #print (f"executing {url} with {payload}")
+    def post(self, url, payload):
+        # print (f"executing {url} with {payload}")
         header = {
             'content-type': "application/json",
             'X-Auth-Token': self.token
         }
-        jpay = json.dumps (payload)
+        jpay = json.dumps(payload)
         try:
-            #conn = http.client.HTTPSConnection(self.DNAC, context=ssl._create_unverified_context())
-            self.conn.request("POST", f"https://{self.DNAC}{url}",jpay,headers=header)
+            # conn = http.client.HTTPSConnection(self.DNAC, context=ssl._create_unverified_context())
+            self.conn.request("POST", f"https://{self.DNAC}{url}", jpay, headers=header)
         except:
             print(f"Error connecting to server {self.DNAC},  exiting")
             exit()
         res = self.conn.getresponse()
         return json.loads(res.read())
 
-    def command_run(self,commands, devs):
+    def command_run(self, commands, devs):
         payload = {'commands': commands, 'deviceUuids': devs}
         ret = []
-        #print (payload)
+        # print (payload)
         self.conn = http.client.HTTPSConnection(self.DNAC, context=ssl._create_unverified_context())
-        resp = self.post("/dna/intent/api/v1/network-device-poller/cli/read-request",payload)
+        resp = self.post("/dna/intent/api/v1/network-device-poller/cli/read-request", payload)
         if "response" not in resp.keys():
-         print(resp)
+            print(resp)
         tresp = self.geturl(resp["response"]["url"])
         while "endTime" not in tresp["response"].keys():
             time.sleep(1)
             tresp = self.geturl(resp["response"]["url"])
         fileId = json.loads(tresp["response"]["progress"])
         fresp = self.geturl(f"/dna/intent/api/v1/file/{fileId['fileId']}")
-        #print (fresp)
+        # print (fresp)
         for single_resp in fresp:
-            res_name =self.topo["devices"][single_resp['deviceUuid']]
+            res_name = self.topo["devices"][single_resp['deviceUuid']]
             for responses in single_resp['commandResponses']:
                 if responses == "SUCCESS":
-                   for command in single_resp['commandResponses']['SUCCESS']:
-                       output = single_resp['commandResponses']['SUCCESS'][command]
-                       ret.append({"host":res_name,"output":output})
+                    for command in single_resp['commandResponses']['SUCCESS']:
+                        output = single_resp['commandResponses']['SUCCESS'][command]
+                        ret.append({"host": res_name, "output": output})
                 else:
                     for command in single_resp['commandResponses']['FAILURE']:
-                        print (single_resp['commandResponses']["FAILURE"].keys())
+                        print(single_resp['commandResponses']["FAILURE"].keys())
                     pass
-        combined={}
-        olddir=os.getcwd()
+        combined = {}
+        olddir = os.getcwd()
         os.chdir(self.logdir)
         for res in ret:
             if res["host"] in combined.keys():
                 combined[res["host"]].append(res["output"])
             else:
-                combined[res["host"]]=[res["output"]]
+                combined[res["host"]] = [res["output"]]
         for outhosts in combined.keys():
-          fd = open(f"{outhosts}.txt","a+")
-          for outs in combined[outhosts]:
-            fd.write(outs)
-          fd.close()
+            fd = open(f"{outhosts}.txt", "a+")
+            for outs in combined[outhosts]:
+                fd.write(outs)
+            fd.close()
         os.chdir(olddir)
         return ret

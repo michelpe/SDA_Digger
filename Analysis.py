@@ -395,7 +395,7 @@ def CheckAccessTunnels():
     return
 
 
-def checkcts():
+def CheckCTS(dnac, dnac_core):
     ctsdevs = ctsfailed = 0
     ctsinfo = dnac_core.get(["Authentication", "CTS", "Devices"])
     if ctsinfo is None:
@@ -510,7 +510,7 @@ def check_MTU():
         f"MTU Analysis: System MTU in fabric {best_mtu}, configured on {goodmtu} devices, misconfigured on {badmtu} devices")
 
 
-def check_auth():
+def CheckAuth(dnac,dnac_core):
     apipa = noip = okip = total = not_authenticated = 0
     auth_db = dnac_core.get(["Global", "Authentication"])
     if auth_db is None:
@@ -527,7 +527,7 @@ def check_auth():
                     if ipv4 == "Unknown":
                         print(
                             f"Authentication Analysis: client {mac} on {interface} {device} not showing an IPv4 Address")
-                        noip = noip = 1
+                        noip = noip + 1
                     elif re.match(r"169.254", ipv4):
                         print(
                             f"Authentication Analysis: client {mac} on {interface} {device} using an APIPA IPv4 Address")
@@ -537,7 +537,7 @@ def check_auth():
                 else:
                     not_authenticated = not_authenticated + 1
     print(f"Authentication Analysis: Verified {total} sessions on {len(auth_db.keys())} edges",
-          f"found {okip} sessions, {noip} without an IP address and {apipa} with an APIPA IP address")
+          f"found {okip} complete sessions, {noip} without an IP address and {apipa} with an APIPA IP address")
     print(f"Authentication Analysis: Found {not_authenticated} Failed Authentication sessions")
 
     return

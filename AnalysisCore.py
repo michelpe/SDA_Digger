@@ -1,12 +1,12 @@
 import json
 from Loggin import LogIt
 
+
 class Analysis_Core:
     def __init__(self):
         self.Parsed = {}
 
-
-    def nesting(self,tdt, clist):
+    def nesting(self, tdt, clist):
         # print(f"{tdt} {type(clist)}\n")
         if type(clist[0]) is dict:
             tdt = clist
@@ -25,14 +25,12 @@ class Analysis_Core:
             tdt[clist[0]] = clist[1]
         return
 
-
-    def oneup(self,tdict, uplevel):
+    def oneup(self, tdict, uplevel):
         ttdict = {}
         ttdict = {uplevel: tdict}
         return ttdict
 
-
-    def buildstruct(self,clist):
+    def buildstruct(self, clist):
         tdict = clist[-1]
         for i in range(len(clist) - 2, 0, -1):
             tdict = self.oneup(tdict, clist[i])
@@ -40,18 +38,18 @@ class Analysis_Core:
 
         '''Add function , interface to be called to safely add a leaf to the parsed structure'''
 
-    def add(self,clist):
-        #print(f"test....{self.Parsed}")
+    def add(self, clist):
+        # print(f"test....{self.Parsed}")
         t = self.get(clist[:-1])
-        #print(f"command {t} {clist[:-1]}")
+        # print(f"command {t} {clist[:-1]}")
         if t is not None:
-            LogIt(f"Debug:duplicate entry, {clist} ",20)
+            LogIt(f"Debug:duplicate entry, {clist} ", 20)
             return
         tlist = []
         tdict = {}
         for i, commands in enumerate(clist):
             tlist.append(commands)
-            if  self.get(tlist) is None:
+            if self.get(tlist) is None:
                 # print(f"{tlist} {clist[:-1]}  is empty could append dict here")
                 tdict = self.buildstruct(clist[i:])
                 ttdict = self.get(tlist[:-1])
@@ -70,19 +68,14 @@ class Analysis_Core:
                     ttdict = self.get(tlist[:-1])
                     ttdict[commands] = tdict
 
-
-    def modify(self,clist, label, value):
+    def modify(self, clist, label, value):
         oldval = self.get(clist)
         oldval[label] = value
         passalong = [*clist, oldval]
         self.add(passalong)
         return
 
-
-
-
         '''Dump the Parsed table for viewing'''
-
 
     def printit(self):
 
@@ -90,8 +83,7 @@ class Analysis_Core:
         print("          Raw Data:")
         print(json.dumps(self.Parsed, indent=4))
 
-
-    def get(self,clist):
+    def get(self, clist):
         tdt = self.Parsed
         for clis in clist:
             if clis in tdt.keys():

@@ -70,7 +70,7 @@ def ParseLoop0(output, hostname):
     return
 
 
-def ParseIP(output, key, hostname):
+def ParseIP(output, key, hostname,dnac_core):
     # print(key)
     if len(key) > 1:
         if re.match(r"route.*", key[1]):
@@ -78,7 +78,7 @@ def ParseIP(output, key, hostname):
 
 
 def ParseCTS(output, key, hostname,dnac_core):
-    # print(key)
+    #print(key)
     if len(key) > 1:
         if re.match(r"env.*", key[1]):
             CTSEnv(output, hostname,dnac_core)

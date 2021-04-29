@@ -134,7 +134,7 @@ def LispDatabaseAR(output, hostname, dnac_core, instance):
                 l3instance = linesplit[2]
                 l3eid = linesplit[1].split('/')[0]
                 tdict = {"l3instance": l3instance}
-                dnac_core.add(["lisp", "AR", hostname, l2instance[:4], leid, l3eid, tdict])
+                dnac_core.add(["lisp", "AR", hostname, leid, l3eid, tdict])
     return
 
 

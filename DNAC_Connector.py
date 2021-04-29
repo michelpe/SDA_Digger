@@ -160,7 +160,10 @@ class DnacCon:
                         ret.append({"host": res_name, "output": output})
                 else:
                     for command in single_resp['commandResponses']['FAILURE']:
-                        print(single_resp['commandResponses']["FAILURE"].keys())
+                        for failed_cli in single_resp['commandResponses']["FAILURE"].keys():
+                            print (f"Failed command : {failed_cli}")
+                        #print(single_resp['commandResponses']["FAILURE"].keys())
+
                     pass
         combined = {}
         olddir = os.getcwd()

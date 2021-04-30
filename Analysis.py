@@ -159,6 +159,71 @@ def CheckCP():
 
 ''' Gets Database information to determine Edge Devices'''
 
+def LispDBAnalysis(dnac,dnac_core):
+    statdevs = 0
+    statteids = 0
+    stateid = 0
+    statfail = 0
+    localstat = 0
+    failedeid = []
+    lispdb = dnac_core.get(["lisp", "database"])
+    cpnodes = dnac_core.get(["lisp", "site", "ip"]).keys() #Assuming all CP nodes have IP
+    if lispdb is None:
+        LogIt(
+            f"Error: No LISP Database entries found to parse", 1)
+        return
+    #print (print(json.dumps(lispdb, indent=4)))
+    for edgename in lispdb.keys():
+        statdevs = statdevs + 1
+        edgeip = dnac_core.get(["Global", "Devices", edgename]).get("IP Address")
+        for edgeinstance in lispdb.get(edgename):
+            if re.match(r"^8", edgeinstance):
+                edgeinstanceaf = "ethernet"
+            else:
+                edgeinstanceaf = "ip"
+            local_macs = dnac_core.get(["lisp", "svi_interface", edgename])
+            local_addr = []
+            if local_macs is not None:
+                for locals in local_macs:
+                    for vals in local_macs[locals].keys():
+                        local_addr.append(local_macs[locals][vals])
+            else:
+                local_addr = []
+            #print(lispdb.get(edgename).get(edgeinstance).keys())
+            for edgeeid in lispdb.get(edgename).get(edgeinstance).keys():
+                #print (edgeeid)
+                if lispdb.get(edgename).get(edgeinstance).get(edgeeid).get("eSource") is not "dynamic-eid":
+                    edgeeid = edgeeid.split(",")[0]
+                    if edgeeid.split('/')[0] in local_addr:
+                        #print(  f"Debug: {edgename} {edgeinstance} {edgeeid} {edgeinstanceaf} is local address")
+                        localstat=localstat+1
+                    else:
+                        success = True
+                        for cp in cpnodes:
+                            if edgeeid in dnac_core.get(["lisp", "site", edgeinstanceaf,cp,edgeinstance]).keys():
+                                #print(f"LISP Database Analysis: found {edgeeid} on CP node {cp}")
+                                rloc = dnac_core.get(["lisp", "site", edgeinstanceaf,cp,edgeinstance,edgeeid]).get('Last Register').split(':')[0]
+                                if rloc == edgeip:
+                                    pass
+                                elif rloc == "--":
+                                    pass
+                                else:
+                                    success = False
+                                    print(f"LISP Database Analysis: {edgeeid} : In LISP database on {edgename}({edgeip}) CP node: {cp} reports RLOC {rloc} ")
+                                    failedeid.append(edgeeid)
+                        if success == False:
+                            statfail = statfail + 1
+                        else:
+                            stateid = stateid + 1
+    print(f"LISP Database Analysis: Number of EID checked {stateid}, failed {statfail}")
+    print(f"LISP Database Analysis: Number of Local EID {localstat}")
+    print(f"LISP Database Analysis: Number of Devices checked {statdevs}")
+    return failedeid
+
+
+
+
+
 
 def CheckEdgeDB():
     statdevs = 0

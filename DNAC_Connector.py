@@ -21,6 +21,8 @@ class DnacCon:
         self.topo = {}
         self.connect = None
         self.fabric = ""
+        self.wlc = {}
+        self.devices = {}
         time.localtime()
         self.logdir = f"log{time.localtime().tm_mon}{time.localtime().tm_mday}_{time.localtime().tm_hour}" \
                       f"{time.localtime().tm_min}"
@@ -136,7 +138,7 @@ class DnacCon:
         res = self.conn.getresponse()
         return json.loads(res.read())
 
-    def command_run(self, commands, devs):
+    def command_run_batch(self, commands, devs):
         payload = {'commands': commands, 'deviceUuids': devs}
         ret = []
         # print (payload)
@@ -180,3 +182,40 @@ class DnacCon:
             fd.close()
         os.chdir(olddir)
         return ret
+
+    def command_run_dev_batch(self, commands, devs):
+        tret = []
+        i=0
+        t=0
+        cmds = []
+        for cmd in commands:
+            cmds.append(cmd)
+            i = i + 1
+            t = t + 1
+            if len(cmds) > 3 or i == len(commands):
+                print(f".",end="")
+                tret.extend(self.command_run_batch(cmds, devs))
+                #print (f"{devs} {cmds}")
+                t = 0
+                cmds=[]
+        return tret
+
+
+    def command_run(self, commands, devs):
+        print(f"Requesting {len(commands)} commands on {len(devs)} device(s) via {self.DNAC}")
+        tret = []
+        i=0
+        t=0
+        devices = []
+        for dev in devs:
+            devices.append(dev)
+            i = i + 1
+            t = t + 1
+            if len(devices) > 4 or i == len(devs):
+
+                tret.extend(self.command_run_dev_batch(commands, devices))
+                t = 0
+                devices=[]
+        print(f" Completed")
+        return tret
+

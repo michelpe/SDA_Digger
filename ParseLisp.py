@@ -43,7 +43,7 @@ def LispMapCache(output, hostname, dnac_core):
                         dnac_core.add(["lisp", "map-cache", hostname, linstance, leid, tdict])
 
 
-def LispDatabase1(output, hostname, instance, AF, dnac_core):
+def LispDatabase(output, hostname, instance, AF, dnac_core):
     splits = []
     if instance == "*":
         splits = (splititup(output, "^[Oo]utput"))
@@ -75,7 +75,7 @@ def LispDatabase1(output, hostname, instance, AF, dnac_core):
     return
 
 
-def LispDatabase(output, hostname, instance, AF, dnac_core):
+def LispDatabase1(output, hostname, instance, AF, dnac_core):
     rloc = []
     set = {}
     tdict = {}
@@ -106,9 +106,8 @@ def LispDatabase(output, hostname, instance, AF, dnac_core):
                 if next_ip == "Server":
                     server = splitline[0]
                 else:
-                    rloc.append({splitline[0]: {"Conf": splitline[2], "rSource": splitline[3:]}})
+                    rloc.append({splitline[0]: {"Conf": splitline[2], "eSource": splitline[3:]}})
                     tdict["RLOC"] = rloc
-
         elif re.match(r"^ Locator", lines):
             next_ip = "Locator"
         else:

@@ -26,7 +26,7 @@ def splititup(output, divider):
             for num, t in enumerate(i[:-1])]
 
 
-def IPRoute(output, hostname):
+def IPRoute(output, hostname,dnac_core):
     iproute = []
     for line in output:
         splitline = line.split()
@@ -38,11 +38,11 @@ def IPRoute(output, hostname):
                 # Check for Loopback0
                 if splitline[-1] == "Loopback0":
                     ip = splitline[1].split("/")[0]
-                    AnalysisCore.modify(["Global", "Devices", hostname], 'IP Address', ip)
-                    AnalysisCore.add2(["Global", "IP", ip, {"Hostname": hostname}])
+                    dnac_core.modify(["Global", "Devices", hostname], 'IP Address', ip)
+                    dnac_core.add(["Global", "IP", ip, {"Hostname": hostname}])
                     LogIt(f"Notice: Extracted IP address {ip} from IP routing table for {hostname}", 7)
     if len(iproute) > 0:
-        AnalysisCore.add2(["Global", "routing", hostname, {"Global": iproute}])
+        dnac_core.add(["Global", "routing", hostname, {"Global": iproute}])
     return
 
 
@@ -69,13 +69,49 @@ def ParseLoop0(output, hostname):
                     LogIt(f"Notice: Extracted IP address {ip[0]} from config for {hostname}", 7)
     return
 
+def IPMRoute(output, hostname,dnac_core):
+    sourceip=destip=flags=rp=None
+    Out = False
+    egress = []
+    for line in output:
+        splitline = line.split()
+        if re.match(r"^\(.*", line):
+            sourceip =splitline[0].strip('(,')
+            destip = splitline[1].strip('),')
+            flags = splitline[-1]
+            if sourceip == '*':
+             rp = splitline[-3]
+        elif re.match(r".*Incoming interface:.*", line):
+            rpf = splitline[-1]
+            incoming = splitline[2]
+            if re.match(r".*Registering.*",line):
+                rpf = splitline[6]
+                if len(splitline)>7:
+                    rpf=f"{splitline[6]} {splitline[7]}"
+        elif re.match(r".*Outgoing interface list:.*",line):
+            Out = True
+        elif len(splitline)<2 and sourceip is not None:
+            Out = False
+            dnac_core.add(["Global", "underlay mroute",destip, hostname, sourceip,
+                           {"RPF":rpf,"flags":flags,"incoming":incoming,"egress":egress,"RP":rp}] )
+            egress=[]
+            sourceip = destip = flags = None
+        elif Out is True:
+             egress.append({splitline[0]:{"Mode":splitline[1],"age":splitline[2]}})
+    return
+
+def IPMFib(output, hostname,dnac_core):
+    return
 
 def ParseIP(output, key, hostname,dnac_core):
     # print(key)
     if len(key) > 1:
         if re.match(r"route.*", key[1]):
-            IPRoute(output, hostname)
-
+            IPRoute(output, hostname,dnac_core)
+        elif re.match(r"mroute.*", key[1]):
+            IPMRoute(output, hostname,dnac_core)
+        elif re.match(r"mfib.*", key[1]):
+            IPMFib(output, hostname,dnac_core)
 
 def ParseCTS(output, key, hostname,dnac_core):
     #print(key)
@@ -119,8 +155,7 @@ def ParseConfig(output, hostname,dnac_core):
         #print(f"dd{splitted}")
         if len(splitted) > 1:
             if re.match(r"^router lisp", splitted[1]):
-                pass
-                #ParseLispConfig(splitted[1:], hostname,dnac_core)
+                ParseLispConfig(splitted[1:], hostname,dnac_core)
   #          elif re.match(r"^interface Loopback0", splitted[1]):
   #              ParseLoop0(splitted[1:], hostname,dnac_core)
             elif re.match(r"^interface Vlan[12]\d{3}", splitted[1]):

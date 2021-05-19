@@ -252,19 +252,39 @@ def lisp(output, key, hostname, dnac_core):
     return
 
 
-def ParseLispConfig(output, hostname):
+def ParseLispConfig(output, hostname,dnac_core):
     splits = splititup(output, "^ !")
     role = {"Border": False, "CP": False, "XTR": False}
+    instance = ""
+    bcast = ""
+    eidtype = ""
+    eidvalue = ""
     for splitted in splits:
         if len(splitted) > 1:
-            for split in splitted:
-                if (re.match(r"^ site", split)):
+            for splited in splitted:
+                splitup=splited.split()
+                if (re.match(r"^ site", splited)):
                     role["CP"] = True
-                elif (re.match(r".*proxy-etr.*", split)) or (re.match(r".*route-import database", split)):
+                elif (re.match(r".*proxy-etr.*", splited)) or (re.match(r".*route-import database", splited)):
                     role["Border"] = True
-                elif re.match(r".*database-mapping", split):
+                elif re.match(r".*database-mapping", splited):
                     role["XTR"] = True
-    AnalysisCore.add(["lisp", "roles", hostname, role])
+                elif re.match(r".*instance-id \d\d\d\d",splited):
+                    instance=splitup[-1]
+                elif re.match(r".*broadcast-underlay", splited):
+                    bcast=splitup[-1]
+                elif re.match(r".*eid-table", splited):
+                    eidvalue=splitup[-1]
+                    eidtype =splitup[-2]
+                elif re.match(r".* service ",splited):
+                    AF=splitup[-1]
+                elif re.match(r".*exit-instance-id", splited):
+                    dnac_core.add(["lisp", "config", hostname, "instances", instance,{"broadcast":bcast,"type":eidtype,"value":eidvalue,"AF":AF}])
+                    instance = ""
+                    bcast = ""
+                    eidtype = ""
+                    eidvalue= ""
+    dnac_core.add(["lisp", "roles", hostname, role])
     LogIt(f"Debug: Device {hostname} assigned roles {role}", 10)
 
     return

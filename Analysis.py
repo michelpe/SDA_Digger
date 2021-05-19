@@ -277,7 +277,7 @@ def CheckEdgeDB():
     return
 
 
-def CheckEdgeMC():
+def CheckEdgeMC(dnac,dnac_core):
     lispmc = dnac_core.get(["lisp", "map-cache"])
     # print(lispmc)
     statdevs = 0
@@ -311,7 +311,7 @@ def CheckEdgeMC():
                     else:
                         if lispmc[edgename][edgeinstance][mcentry]["RLOC"] in cpinfo:
                             LogIt(
-                                f"Map Cache Analysis : Device:{edgename} reporting {edgeinstance}:{mcentry} with RLOC {lispmc[edgename][edgeinstance][mcentry]['RLOC']} in map cache consistent with CP info RLOC  {cpinfo}",
+                                f"Debug:Map Cache Analysis : Device:{edgename} reporting {edgeinstance}:{mcentry} with RLOC {lispmc[edgename][edgeinstance][mcentry]['RLOC']} in map cache consistent with CP info RLOC  {cpinfo}",
                                 20)
                         else:
                             print(
@@ -362,21 +362,22 @@ def Stats():
     return
 
 
-def CheckRLOCreach():
-    devices = dnac_core.get(["lisp", "roles"])
-    if devices is None:
-        return
+def CheckRLOCreach(dnac,dnac_core):
+    #devices = dnac_core.get(["lisp", "roles"])
+    #if devices is None:
+    #    return
     rlocips = []
     rlocnames = []
     reachfail = reachsuccess = 0
     reachtotal = 0
-    for lispdevice in devices:
+    devices = {}
+    roles = ["EDGENODE","BORDERNODE"]
+    for role in roles:
+        devices.update(dnac_core.get(["devices", dnac.fabric, role]))
+    for device in devices:
+        rlocips.append(device)
+        rlocnames.append(devices[device]["name"])
         reachtotal = reachtotal + 1
-        if devices[lispdevice]['Border'] or devices[lispdevice]['XTR']:
-            devi = dnac_core.get(["Global", "Devices", lispdevice])
-            if devi is not None:
-                rlocips.append(devi["IP Address"])
-                rlocnames.append(lispdevice)
     iptables = dnac_core.get(["Global", "routing"])
     for lispdevice in rlocnames:
         iptable = set(iptables[lispdevice]["Global"])
@@ -389,7 +390,7 @@ def CheckRLOCreach():
             t.intersection_update(set(rlocips))
             print(f"Reachability Analysis: {lispdevice} missing /32 reachability to :  {set(rlocips).difference(t)}")
     print(
-        f"Reachability Analysis: Fabric Devices with full reachabily {reachsuccess}, devices without full reachability {reachfail}," +
+        f"Reachability Analysis: Fabric Devices with full (/32) reachabily {reachsuccess}, devices without full reachability {reachfail}," +
         f" not checked {reachtotal - (reachsuccess + reachfail)}")
     return
 
@@ -730,6 +731,42 @@ def CP2Fabric(dnac, dnac_core):
                     dnac_core.add(
                         ["fabric", lispinst, eidsp, {"RLOC": who, "state": state}])
     return
+
+def Config2Fabric(dnac, dnac_core):
+    devices = dnac_core.get(["lisp", "config"])
+    instances = {}
+    for device in devices.keys():
+        for instance in devices[device]["instances"].keys():
+            if instance not in instances:
+                instances[instance]=devices[device]["instances"][instance]
+    dnac_core.add(
+        ["fabric", "configured instances",instances])
+    return
+
+def UnderlayMcastAnalysis(dnac,dnac_core,mcastunder):
+    devinstances = dnac_core.get(["lisp", "config"])
+    mcastdevices = []
+    for mcastgr in mcastunder:
+        underlay = dnac_core.get(["Global", "underlay mroute",mcastgr])
+        for device in devinstances.keys():
+            for instance in devinstances[device]['instances'].keys():
+                if devinstances[device]['instances'][instance]['broadcast'] == mcastgr:
+                    mcastdevices.append(device)
+        mcastdevices=list(set(mcastdevices))
+        print(f"Checking mcast for Layer 2 flood groups {mcastgr} on {len(mcastdevices)} devices")
+        for mcastdevice in mcastdevices:
+           minfo=dnac_core.get(["Global", "underlay mroute", mcastgr, mcastdevice])
+           devip = dnac_core.get(["Global","Devices",mcastdevice]).get("IP Address")
+           if devip in minfo.keys():
+               if len(minfo[devip]['egress']) == 0:
+                   print(f"Underlay Mcast: Device {mcastdevice} has no Egress interfaces as sender with {devip} to  {mcastgr}")
+               elif re.match(r".*Registering.*",minfo[devip]['RPF']):
+                   print(f"Underlay Mcast: Device {mcastdevice} is showing {minfo[devip]['RPF']} for source {devip}(self) to {mcastgr}")
+           else:
+               print(
+                   f"Underlay Mcast: Device {mcastdevice} has no Mroute with itself as  sender({devip}) to  {mcastgr}")
+    return
+
 
 
 def BuildFabric(dnac, dnac_core):

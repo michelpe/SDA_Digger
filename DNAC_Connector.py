@@ -139,6 +139,7 @@ class DnacCon:
         return json.loads(res.read())
 
     def command_run_batch(self, commands, devs):
+        i=0
         payload = {'commands': commands, 'deviceUuids': devs}
         ret = []
         # print (payload)
@@ -146,10 +147,17 @@ class DnacCon:
         resp = self.post("/dna/intent/api/v1/network-device-poller/cli/read-request", payload)
         if "response" not in resp.keys():
             print(resp)
+        if 'errorCode' in resp["response"].keys():
+            print(f"Encountered unexpected error: {resp['response']['errorCode']} : {resp['response']['message']}")
+            exit()
         tresp = self.geturl(resp["response"]["url"])
         while "endTime" not in tresp["response"].keys():
+            i=i+1
             time.sleep(1)
             tresp = self.geturl(resp["response"]["url"])
+            if i > 300 :
+                print(f"Timeout exceeded, exiting")
+                exit()
         fileId = json.loads(tresp["response"]["progress"])
         fresp = self.geturl(f"/dna/intent/api/v1/file/{fileId['fileId']}")
         # print (fresp)

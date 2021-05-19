@@ -759,12 +759,12 @@ def UnderlayMcastAnalysis(dnac,dnac_core,mcastunder):
            devip = dnac_core.get(["Global","Devices",mcastdevice]).get("IP Address")
            if devip in minfo.keys():
                if len(minfo[devip]['egress']) == 0:
-                   print(f"Underlay Mcast: Device {mcastdevice} has no Egress interfaces as sender with {devip} to  {mcastgr}")
+                   print(f"Underlay Mcast: Device {mcastdevice} has no Egress interfaces as sender with {devip} to {mcastgr}")
                elif re.match(r".*Registering.*",minfo[devip]['RPF']):
                    print(f"Underlay Mcast: Device {mcastdevice} is showing {minfo[devip]['RPF']} for source {devip}(self) to {mcastgr}")
            else:
                print(
-                   f"Underlay Mcast: Device {mcastdevice} has no Mroute with itself as  sender({devip}) to  {mcastgr}")
+                   f"Underlay Mcast: Device {mcastdevice} has no Mroute with itself as  sender({devip}) to {mcastgr}")
     return
 
 

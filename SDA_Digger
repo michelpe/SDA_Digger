@@ -33,7 +33,8 @@ mc_cmd_list = ["show lisp instance-id * ethernet map-cache", "show lisp instance
 def BuildIdlist(dnac, dnac_core, roles):
     devices = {}
     for role in roles:
-        devices.update(dnac_core.get(["devices", dnac.fabric, role]))
+        if dnac_core.get(["devices", dnac.fabric, role]) is not None:
+            devices.update(dnac_core.get(["devices", dnac.fabric, role]))
     devid = []
     for device in devices.keys():
         devid.append(devices[device]["id"])

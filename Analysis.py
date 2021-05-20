@@ -399,6 +399,13 @@ def CheckLispSession(dnac,dnac_core):
     edgenodes = dnac_core.get(["devices", dnac.fabric, "EDGENODE"])
     borders = dnac_core.get(["devices", dnac.fabric, "BORDERNODE"])
     cpnodes = dnac_core.get(["devices", dnac.fabric, "MAPSERVER"])
+    if edgenodes is None:
+        edgenodes = []
+    if borders is None:
+        borders = []
+    if cpnodes is None:
+        print("No CP nodes found, exiting")
+        return
     devices = []
     cp_nodes = []
     if cpnodes is None:

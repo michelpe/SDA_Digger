@@ -58,16 +58,17 @@ def check_dev(dnac, dnac_core, fabric, dev):
             resp = dnac.geturl(f"/dna/intent/api/v1/network-device?managementIpAddress={dev['managementIpAddress']}")
             dnac.devices[dev['hostname']] = resp.get("response")
             # print(dev["hostname"])
-            # print (resp)
+            #print (resp['response'][0]['reachabilityStatus'])
             if len(roles) > 0:
                 uuid = resp['response'][0]['id']
                 for role in roles:
                     dnac_core.add(["devices", fabric, role, dev['managementIpAddress'],
                                    {"name": dev["hostname"], "IOS": dev['softwareVersion'], "id": uuid,
-                                    "roles": roles}])
+                                    "roles": roles,"reachability": dev['reachabilityStatus']}])
                     dnac_core.add(["Global", "Devices", dev["hostname"], {"IP Address": dev["managementIpAddress"]}])
                     dnac.topo['devices'][uuid] = dev['hostname']
                     dnac.topo['ip2uuid'][dev["managementIpAddress"]] = uuid
+                    dnac.topo['reach'][uuid]=dev['reachabilityStatus']
     else:
         print(f"Error retrieving SDA API calls needed, possible DNAC version 1.x used")
         exit()
@@ -78,7 +79,7 @@ def build_hierarch(dnac, dnac_core):
     resp = dnac.geturl("/dna/intent/api/v1/site")
     sites = resp["response"]
     site_view = []
-    dnac.topo = {'sites': {}, 'fabrics': {}, 'devices': {}, 'ip2uuid': {}}
+    dnac.topo = {'sites': {}, 'fabrics': {}, 'devices': {}, 'ip2uuid': {},'reach': {}}
     for site in sites:
         if 'parentId' in site.keys():
             site_view.append(site['siteNameHierarchy'])
@@ -143,11 +144,15 @@ def check_fabric(fabric, dnac, dnac_core):
         for responses in ret:
             # print (responses["output"])
             ParseCommands.ParseSingleDev(responses["output"], responses["host"], dnac_core)
-        print(f"Completed {responses['host']} ")
+        print(f"Completed {cp_node} ")
     edges = []
-    edge = dnac_core.get(["devices", fabric, "EDGENODE"])
-    edge.update(dnac_core.get(["devices", fabric, "BORDERNODE"]))
-    edge.update(dnac_core.get(["devices", fabric, "MAPSERVER"]))
+    edge = {}
+    if dnac_core.get(["devices", fabric, "EDGENODE"]) is not None:
+        edge.update(dnac_core.get(["devices", fabric, "EDGENODE"]))
+    if dnac_core.get(["devices", fabric, "BORDERNODE"]) is not None:
+        edge.update(dnac_core.get(["devices", fabric, "BORDERNODE"]))
+    if dnac_core.get(["devices", fabric, "MAPSERVER"]) is not None:
+        edge.update(dnac_core.get(["devices", fabric, "MAPSERVER"]))
     print(f"Importing configurations for fabric {fabric}")
     for edge_dev in edge:
         edges.append(edge[edge_dev]["id"])

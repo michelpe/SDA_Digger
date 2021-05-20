@@ -216,14 +216,15 @@ class DnacCon:
         t=0
         devices = []
         for dev in devs:
-            devices.append(dev)
-            i = i + 1
-            t = t + 1
-            if len(devices) > 4 or i == len(devs):
+            if self.topo['reach'][dev]=="Reachable":
+                devices.append(dev)
+                i = i + 1
+                t = t + 1
+                if len(devices) > 4 or i == len(devs):
 
-                tret.extend(self.command_run_dev_batch(commands, devices))
-                t = 0
-                devices=[]
+                    tret.extend(self.command_run_dev_batch(commands, devices))
+                    t = 0
+                    devices=[]
         print(f" Completed")
         return tret
 

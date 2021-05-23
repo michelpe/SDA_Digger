@@ -280,6 +280,7 @@ def ParseLispConfig(output, hostname,dnac_core):
                     AF=splitup[-1]
                 elif re.match(r".*exit-instance-id", splited):
                     dnac_core.add(["lisp", "config", hostname, "instances", instance,{"broadcast":bcast,"type":eidtype,"value":eidvalue,"AF":AF}])
+                    dnac_core.add(["lisp", "config", hostname, "vlan_vrf",eidvalue,{"instance":instance,"AF":AF}])
                     instance = ""
                     bcast = ""
                     eidtype = ""

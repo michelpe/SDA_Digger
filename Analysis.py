@@ -4,6 +4,8 @@ import re
 import collections
 import ipaddress
 import json
+import ParseCommands
+import os
 
 
 def build_edge_list():
@@ -159,7 +161,8 @@ def CheckCP():
 
 ''' Gets Database information to determine Edge Devices'''
 
-def LispDBAnalysis(dnac,dnac_core):
+
+def LispDBAnalysis(dnac, dnac_core):
     statdevs = 0
     statteids = 0
     stateid = 0
@@ -167,12 +170,12 @@ def LispDBAnalysis(dnac,dnac_core):
     localstat = 0
     failedeid = []
     lispdb = dnac_core.get(["lisp", "database"])
-    cpnodes = dnac_core.get(["lisp", "site", "ip"]).keys() #Assuming all CP nodes have IP
+    cpnodes = dnac_core.get(["lisp", "site", "ip"]).keys()  # Assuming all CP nodes have IP
     if lispdb is None:
         LogIt(
             f"Error: No LISP Database entries found to parse", 1)
         return
-    #print (print(json.dumps(lispdb, indent=4)))
+    # print (print(json.dumps(lispdb, indent=4)))
     for edgename in lispdb.keys():
         statdevs = statdevs + 1
         edgeip = dnac_core.get(["Global", "Devices", edgename]).get("IP Address")
@@ -189,27 +192,29 @@ def LispDBAnalysis(dnac,dnac_core):
                         local_addr.append(local_macs[locals][vals])
             else:
                 local_addr = []
-            #print(lispdb.get(edgename).get(edgeinstance).keys())
+            # print(lispdb.get(edgename).get(edgeinstance).keys())
             for edgeeid in lispdb.get(edgename).get(edgeinstance).keys():
-                #print (edgeeid)
+                # print (edgeeid)
                 if lispdb.get(edgename).get(edgeinstance).get(edgeeid).get("eSource") is not "dynamic-eid":
                     edgeeid = edgeeid.split(",")[0]
                     if edgeeid.split('/')[0] in local_addr:
-                        #print(  f"Debug: {edgename} {edgeinstance} {edgeeid} {edgeinstanceaf} is local address")
-                        localstat=localstat+1
+                        # print(  f"Debug: {edgename} {edgeinstance} {edgeeid} {edgeinstanceaf} is local address")
+                        localstat = localstat + 1
                     else:
                         success = True
                         for cp in cpnodes:
-                            if edgeeid in dnac_core.get(["lisp", "site", edgeinstanceaf,cp,edgeinstance]).keys():
-                                #print(f"LISP Database Analysis: found {edgeeid} on CP node {cp}")
-                                rloc = dnac_core.get(["lisp", "site", edgeinstanceaf,cp,edgeinstance,edgeeid]).get('Last Register').split(':')[0]
+                            if edgeeid in dnac_core.get(["lisp", "site", edgeinstanceaf, cp, edgeinstance]).keys():
+                                # print(f"LISP Database Analysis: found {edgeeid} on CP node {cp}")
+                                rloc = dnac_core.get(["lisp", "site", edgeinstanceaf, cp, edgeinstance, edgeeid]).get(
+                                    'Last Register').split(':')[0]
                                 if rloc == edgeip:
                                     pass
                                 elif rloc == "--":
                                     pass
                                 else:
                                     success = False
-                                    print(f"LISP Database Analysis: {edgeeid} : In LISP database on {edgename}({edgeip}) CP node: {cp} reports RLOC {rloc} ")
+                                    print(
+                                        f"LISP Database Analysis: {edgeeid} : In LISP database on {edgename}({edgeip}) CP node: {cp} reports RLOC {rloc} ")
                                     failedeid.append(edgeeid)
                         if success == False:
                             statfail = statfail + 1
@@ -219,10 +224,6 @@ def LispDBAnalysis(dnac,dnac_core):
     print(f"LISP Database Analysis: Number of Local EID {localstat}")
     print(f"LISP Database Analysis: Number of Devices checked {statdevs}")
     return failedeid
-
-
-
-
 
 
 def CheckEdgeDB():
@@ -277,7 +278,7 @@ def CheckEdgeDB():
     return
 
 
-def CheckEdgeMC(dnac,dnac_core):
+def CheckEdgeMC(dnac, dnac_core):
     lispmc = dnac_core.get(["lisp", "map-cache"])
     # print(lispmc)
     statdevs = 0
@@ -362,16 +363,16 @@ def Stats():
     return
 
 
-def CheckRLOCreach(dnac,dnac_core):
-    #devices = dnac_core.get(["lisp", "roles"])
-    #if devices is None:
+def CheckRLOCreach(dnac, dnac_core):
+    # devices = dnac_core.get(["lisp", "roles"])
+    # if devices is None:
     #    return
     rlocips = []
     rlocnames = []
     reachfail = reachsuccess = 0
     reachtotal = 0
     devices = {}
-    roles = ["EDGENODE","BORDERNODE"]
+    roles = ["EDGENODE", "BORDERNODE"]
     for role in roles:
         devices.update(dnac_core.get(["devices", dnac.fabric, role]))
     for device in devices:
@@ -395,7 +396,7 @@ def CheckRLOCreach(dnac,dnac_core):
     return
 
 
-def CheckLispSession(dnac,dnac_core):
+def CheckLispSession(dnac, dnac_core):
     edgenodes = dnac_core.get(["devices", dnac.fabric, "EDGENODE"])
     borders = dnac_core.get(["devices", dnac.fabric, "BORDERNODE"])
     cpnodes = dnac_core.get(["devices", dnac.fabric, "MAPSERVER"])
@@ -409,22 +410,22 @@ def CheckLispSession(dnac,dnac_core):
     devices = []
     cp_nodes = []
     if cpnodes is None:
-        print (f"no devices found in fabric {dnac.fabric} exiting")
+        print(f"no devices found in fabric {dnac.fabric} exiting")
         exit()
     for cp in cpnodes:
-        #print (cpnodes[cp]["name"])
+        # print (cpnodes[cp]["name"])
         cp_nodes.append(cpnodes[cp]["name"])
     for border in borders:
-        #print(borders[border]["name"])
+        # print(borders[border]["name"])
         devices.append(borders[border]["name"])
     for edge in edgenodes:
-        #print(edgenodes[edge]["name"])
+        # print(edgenodes[edge]["name"])
         devices.append(edgenodes[edge]["name"])
     esession = fsession = fails = 0
     for device in set(devices):
         sesdb = dnac_core.get(['lisp', 'session', device]).keys()
         for session in cpnodes:
-            cpname = dnac_core.get(['devices',dnac.fabric,'MAPSERVER',session])["name"]
+            cpname = dnac_core.get(['devices', dnac.fabric, 'MAPSERVER', session])["name"]
             if session not in sesdb:
                 if cpname == device:
                     pass
@@ -438,7 +439,8 @@ def CheckLispSession(dnac,dnac_core):
                     if dnac_core.get(['lisp', 'database', device]) is None:
                         print(f"Informational:Session Down on device {device} but no Database entries found")
                     else:
-                        print(f"Session Analysis: {device} has LISP session in Down state to {cpname} with Database Entries present")
+                        print(
+                            f"Session Analysis: {device} has LISP session in Down state to {cpname} with Database Entries present")
                         fails = fails + 1
     print(
         f"Session Analysis: Checked LISP sessions on {len(devices)} nodes towards {len(cpnodes)} CP nodes. Found {esession} sessions, missing {fsession}, failures {fails}")
@@ -583,7 +585,7 @@ def check_MTU():
         f"MTU Analysis: System MTU in fabric {best_mtu}, configured on {goodmtu} devices, misconfigured on {badmtu} devices")
 
 
-def CheckAuth(dnac,dnac_core):
+def CheckAuth(dnac, dnac_core):
     apipa = noip = okip = total = not_authenticated = 0
     auth_db = dnac_core.get(["Global", "Authentication"])
     if auth_db is None:
@@ -739,41 +741,44 @@ def CP2Fabric(dnac, dnac_core):
                         ["fabric", lispinst, eidsp, {"RLOC": who, "state": state}])
     return
 
+
 def Config2Fabric(dnac, dnac_core):
     devices = dnac_core.get(["lisp", "config"])
     instances = {}
     for device in devices.keys():
         for instance in devices[device]["instances"].keys():
             if instance not in instances:
-                instances[instance]=devices[device]["instances"][instance]
+                instances[instance] = devices[device]["instances"][instance]
     dnac_core.add(
-        ["fabric", "configured instances",instances])
+        ["fabric", "configured instances", instances])
     return
 
-def UnderlayMcastAnalysis(dnac,dnac_core,mcastunder):
+
+def UnderlayMcastAnalysis(dnac, dnac_core, mcastunder):
     devinstances = dnac_core.get(["lisp", "config"])
     mcastdevices = []
     for mcastgr in mcastunder:
-        underlay = dnac_core.get(["Global", "underlay mroute",mcastgr])
+        underlay = dnac_core.get(["Global", "underlay mroute", mcastgr])
         for device in devinstances.keys():
             for instance in devinstances[device]['instances'].keys():
                 if devinstances[device]['instances'][instance]['broadcast'] == mcastgr:
                     mcastdevices.append(device)
-        mcastdevices=list(set(mcastdevices))
+        mcastdevices = list(set(mcastdevices))
         print(f"Checking mcast for Layer 2 flood groups {mcastgr} on {len(mcastdevices)} devices")
         for mcastdevice in mcastdevices:
-           minfo=dnac_core.get(["Global", "underlay mroute", mcastgr, mcastdevice])
-           devip = dnac_core.get(["Global","Devices",mcastdevice]).get("IP Address")
-           if devip in minfo.keys():
-               if len(minfo[devip]['egress']) == 0:
-                   print(f"Underlay Mcast: Device {mcastdevice} has no Egress interfaces as sender with {devip} to {mcastgr}")
-               elif re.match(r".*Registering.*",minfo[devip]['RPF']):
-                   print(f"Underlay Mcast: Device {mcastdevice} is showing {minfo[devip]['RPF']} for source {devip}(self) to {mcastgr}")
-           else:
-               print(
-                   f"Underlay Mcast: Device {mcastdevice} has no Mroute with itself as  sender({devip}) to {mcastgr}")
+            minfo = dnac_core.get(["Global", "underlay mroute", mcastgr, mcastdevice])
+            devip = dnac_core.get(["Global", "Devices", mcastdevice]).get("IP Address")
+            if devip in minfo.keys():
+                if len(minfo[devip]['egress']) == 0:
+                    print(
+                        f"Underlay Mcast: Device {mcastdevice} has no Egress interfaces as sender with {devip} to {mcastgr}")
+                elif re.match(r".*Registering.*", minfo[devip]['RPF']):
+                    print(
+                        f"Underlay Mcast: Device {mcastdevice} is showing {minfo[devip]['RPF']} for source {devip}(self) to {mcastgr}")
+            else:
+                print(
+                    f"Underlay Mcast: Device {mcastdevice} has no Mroute with itself as  sender({devip}) to {mcastgr}")
     return
-
 
 
 def BuildFabric(dnac, dnac_core):
@@ -782,4 +787,114 @@ def BuildFabric(dnac, dnac_core):
     DatabaseTooFabric(dnac, dnac_core)
     print("*" * 80)
     CPTooFabric(dnac, dnac_core)
+    return
+
+
+def FindMac(dnac, dnac_core, inp):
+    Location = ""
+    Instance = ""
+
+    return Location, Instance
+
+
+def ListEndStationsDevice(dnac, dnac_core):
+    instance = input("What instance should be listed(* for all):")
+    fabric = dnac_core.get(["fabric"])
+    for instances in fabric.keys():
+        if instance in instances or instance == "*":
+            for host in fabric[instances].keys():
+                print(f"{instances} {host} {fabric[instances]}")
+    return
+
+
+def digger_commands(dnac, dnac_core, hostname, dataset):
+    f = open("dig_commands.txt", "r")
+    dig_cmd = []
+    for line in f.readlines():
+        splitline = line.split(":")
+        cmdsplit = splitline[-1].strip()
+        cmdbuild = []
+        allparsed = True
+        for cmdpart in cmdsplit.split(" "):
+            if re.match(r"^\$", cmdpart):
+                if cmdpart.strip("$") in dataset.keys():
+                    cmdpart = dataset[cmdpart.strip("$")]
+                else:
+                    #print(f"f{cmdpart} not found, skipping command")
+                    # dig_cmd_resolve() function to be implemented
+                    allparsed = False
+            cmdbuild.append(cmdpart)
+        if allparsed is True:
+            dig_cmd.append(" ".join(cmdbuild))
+    rlocuid = dnac.topo['hostnames'][hostname]
+    ret = dnac.command_run(dig_cmd,
+                           [rlocuid])
+    for responses in ret:
+        print(responses["output"])
+        ParseCommands.ParseSingleDev(responses["output"], responses["host"], dnac_core)
+    return
+
+
+def mac2ip(dttable, vlan, macaddress):
+    if vlan in dttable.keys():
+        for ip in dttable[vlan].keys():
+            if dttable[vlan][ip]['mac'] == macaddress:
+                return ip
+    return None
+
+
+def Device2Mac(dnac, dnac_core, debug_core, inp):
+    print(f"Device {inp} present in Fabric, gathering information")
+    # ListEndStationsDevice(dnac,dnac_core)
+    uuid = dnac.topo['hostnames'][inp]
+    ret = dnac.command_run(["show device-tracking database", "show mac add"], [uuid])
+    for responses in ret:
+        ParseCommands.ParseSingleDev(responses["output"], responses["host"], debug_core)
+    mactable = debug_core.get(["Global", "mac", inp])
+    dttable = debug_core.get(["Global", "Device-tracking", inp])
+    i = 0
+    entries = {}
+    for vlan in mactable.keys():
+        for macaddress in mactable[vlan].keys():
+            if re.match(r".*/.*", mactable[vlan][macaddress]['Int']):
+                i = i + 1
+                ip = mac2ip(dttable, vlan, macaddress)
+                inter = mactable[vlan][macaddress]['Int']
+                vn = dnac_core.get(["lisp", "svi_interface", inp, "Vlan" + vlan])
+                if vn is not None:
+                    vrf = vn.get("vrf")
+                else:
+                    vrf = "Unknown"
+                print(f"{i}: Vlan:{vlan}  Mac:{macaddress} IP:{ip} Interface :{inter} VRF/VN:{vrf}")
+                entries[str(i)] = {'vlan': vlan, 'macaddress': macaddress, 'interface': inter}
+                l2dat = dnac_core.get(["lisp", "config", inp, "vlan_vrf", vlan])
+                if ip is not None:
+                    entries[str(i)]["ipv4"]=ip
+                    entries[str(i)]["ipv4tot"] = ip + '\32'
+                    entries[str(i)]["vrf"] = vrf
+                if l2dat is not None:
+                    entries[str(i)]["l2inst"] = l2dat['instance']
+    while True:
+        choice = input("What entry should be used:")
+        if choice in entries.keys():
+            digger_commands(dnac, dnac_core, inp, entries[choice])
+            return
+    return
+
+
+def Digger(dnac, dnac_core):
+    debug_core = AnalysisCore.Analysis_Core()
+    while True:
+        inp = input("Please enter Hostname of Fabric Device or list :")
+        if inp == "quit" or inp == "q":
+            return
+        elif re.match(r"\d{0,3}\.\d{0,3}\.\d{0,3}.\.\d{0,3}.", inp):
+            print(f"IP {inp}")
+        elif re.match(r".{4}\..{4}\..{4}", inp):
+            Host, Instance = FindMac(dnac, dnac_core, inp)
+        elif dnac_core.get(["Global", "Devices", inp]) is not None:
+            Device2Mac(dnac, dnac_core, debug_core, inp)
+        elif inp == "list":
+            for devs in dnac_core.get(["Global", "Devices"]):
+                print(devs)
     return

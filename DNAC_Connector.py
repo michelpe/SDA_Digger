@@ -13,7 +13,7 @@ class DnacCon:
     token = None
     logdir = None
 
-    def __init__(self, server, user, pword):
+    def __init__(self, server, user, pword,directory):
         self.DNAC = server
         self.username = user
         self.password = pword
@@ -26,12 +26,16 @@ class DnacCon:
         time.localtime()
         self.logdir = f"log{time.localtime().tm_mon}{time.localtime().tm_mday}_{time.localtime().tm_hour}" \
                       f"{time.localtime().tm_min}"
+        if directory is not None:
+            self.logdir = os.path.join(directory,self.logdir)
+        else:
+            self.logdir = os.path.join(os.getcwd(), self.logdir)
         if os.path.exists(self.logdir):
             # directory already exists. appending outputs
             pass
         else:
             os.makedirs(self.logdir)
-        print(f"Storing outputs in directory {os.path.join(os.getcwd(), self.logdir)}")
+        print(f"Storing outputs in directory {self.logdir}")
 
     def connect_dnac(self, http_action, http_url, http_headers):
         http_headers['X-auth-token'] = self.token

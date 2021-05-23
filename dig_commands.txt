@@ -1,0 +1,11 @@
+1:XE_EDGE:show ip route vrf $vrf $ipv4
+1:XE_EDGE:show version
+1:XE_EDGE:show lisp instance-id $l2inst ethernet database $macaddress
+1:XE_EDGE:show lisp instance-id $l2inst ethernet database address-resolution $macaddress
+1:XE_EDGE:show lisp instance-id $l2inst ipv4 database $ipv4
+1:XE_EDGE:show ip route vrf $vrf $ipv4tot
+1:XE_EDGE:show device-tracking database mac $macaddress
+1:XE_EDGE:show lisp instance-id * ethernet database wlc $macaddress
+1:XE_EDGE:show mac address-table address $macaddress
+1:XE_EDGE:show access-session mac $macaddress detail
+1:XE_EDGE:show spanning-tree interface $interface 

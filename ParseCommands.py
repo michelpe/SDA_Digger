@@ -6,7 +6,7 @@ from ParseGeneric import *
 from ParseAccessTunnel import *
 
 
-def version(output, key, hostname):
+def version(output, key, hostname,dnac_core):
     return
 
 def ParseWireless(output, key, hostname):
@@ -179,7 +179,13 @@ def ParseDT(output, key, hostname,dnac_core):
                                    "state":line_split[7]}])
     return
 
-
+def ParseMac(output, key, hostname,dnac_core):
+    tdict={}
+    for lines in output:
+        line_split = lines.split()
+        if len(line_split)>3:
+            if re.match(r"[12]\d\d\d",line_split[0]):
+                dnac_core.add(["Global","mac",hostname,line_split[0],line_split[1],{"Source":line_split[2],"Int":line_split[3]}])
 
 
 
@@ -231,6 +237,8 @@ def ParseSingleDev(output, hostname,dnac_core):
                 ParseAP(output, splitkey[1:], hostname,dnac_core)
             elif re.match(r"access-session", splitkey[1]):
                 ParseAccess(output, splitkey[1:], hostname,dnac_core)
+            elif re.match(r"mac", splitkey[1]):
+                ParseMac(output, splitkey[1:], hostname,dnac_core)
             elif len(splitkey) > 6:
                 if re.match(r"access-tunnel", splitkey[3]):
                     ParseAccessTunnel(output, splitkey[1:], hostname,dnac_core)

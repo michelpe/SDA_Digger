@@ -68,6 +68,7 @@ def check_dev(dnac, dnac_core, fabric, dev):
                                     "roles": roles,"reachability": dev['reachabilityStatus']}])
                     dnac_core.add(["Global", "Devices", dev["hostname"], {"IP Address": dev["managementIpAddress"]}])
                     dnac.topo['devices'][uuid] = dev['hostname']
+                    dnac.topo['hostnames'][dev['hostname']]=uuid
                     dnac.topo['ip2uuid'][dev["managementIpAddress"]] = uuid
                     dnac.topo['reach'][uuid]=dev['reachabilityStatus']
     else:
@@ -80,7 +81,7 @@ def build_hierarch(dnac, dnac_core):
     resp = dnac.geturl("/dna/intent/api/v1/site")
     sites = resp["response"]
     site_view = []
-    dnac.topo = {'sites': {}, 'fabrics': {}, 'devices': {}, 'ip2uuid': {},'reach': {}}
+    dnac.topo = {'sites': {}, 'fabrics': {}, 'devices': {}, 'ip2uuid': {},'reach': {},'hostnames':{}}
     for site in sites:
         if 'parentId' in site.keys():
             site_view.append(site['siteNameHierarchy'])
@@ -186,52 +187,58 @@ def Build_Lisp_Fabric(dnac, dnac_core, fabric):
 
 def Eth_L2_check(dnac, dnac_core, debug_core, whereits, hosttotal, host):
     loc = dnac_core.get(["fabric"])
+    lispinstance = whereits
     for instances in loc.keys():
         if dnac_core.get(["fabric", instances, hosttotal]) is not None:
             lispinstance = instances
             lisprloc = dnac_core.get(['fabric', instances, hosttotal])['RLOC']
-            rlocuid = dnac.topo['ip2uuid'][lisprloc]
-            devname = dnac.topo['devices'][rlocuid]
-            print(f"Found {host} in LISP Instance {lispinstance} on device {devname} ({lisprloc})")
 
-            ret = dnac.command_run([f"show lisp instance-id {lispinstance} ethernet database {host}",
-                                    f"show lisp instance-id {lispinstance} ethernet database address-resolution {host}",
-                                    f"show device-tracking database mac {host}",
-                                    f"show lisp instance-id {lispinstance} ethernet database wlc {host}"],
-                                   [rlocuid])
-            for responses in ret:
-                print(responses["output"])
-                ParseCommands.ParseSingleDev(responses["output"], responses["host"], debug_core)
-            ret = dnac.command_run([f"show mac address-table address {host}",
-                                    f"show access-session mac {host} detail"
-                                    ],
-                                   [rlocuid])
-            for responses in ret:
-                print(responses["output"])
-                ParseCommands.ParseSingleDev(responses["output"], responses["host"], debug_core)
+        else:
+            lisprloc = input ("Please provide IP addres of Edge/Border where mac address is connected :")
+            if re.match(r"\d{0,3}\.\d{0,3}\.\d{0,3}.\.\d{0,3}.",lisprloc):
+                print(f"checking with RLOC IP {lisprloc}")
+            else:
+                print("Invalid IP address for RLOC")
+                return
+        rlocuid = dnac.topo['ip2uuid'][lisprloc]
+        devname = dnac.topo['devices'][rlocuid]
+        print(f"Found {host} in LISP Instance {lispinstance} on device {devname} ({lisprloc})")
+
+        ret = dnac.command_run([f"show lisp instance-id {lispinstance} ethernet database {host}",
+                                f"show lisp instance-id {lispinstance} ethernet database address-resolution {host}",
+                                f"show device-tracking database mac {host}",
+                                f"show lisp instance-id {lispinstance} ethernet database wlc {host}",
+                                f"show mac address-table address {host}",
+                                f"show access-session mac {host} detail"],
+                                [rlocuid])
+        for responses in ret:
+            print(responses["output"])
+            ParseCommands.ParseSingleDev(responses["output"], responses["host"], debug_core)
 
     cp = dnac_core.get(["devices", dnac.fabric, "MAPSERVER"])
     cpid = []
-    for cp_nodes in cp.keys():
-        cpid.append(cp[cp_nodes].get("id"))
-    ret = dnac.command_run([f"show lisp instance-id {lispinstance} ethernet server {host}",
-                            f"show lisp instance-id {lispinstance} ethernet server address-resolution",
-                            f"show lisp instance-id {lispinstance} ethernet server {host} registration-history",
-                            f"show ip dhcp snooping binding {host}"
-                            ], cpid)
-    for responses in ret:
-        print(responses["output"])
-        ParseCommands.ParseSingleDev(responses["output"], responses["host"], debug_core)
+    if cp is not None:
+        for cp_nodes in cp.keys():
+            cpid.append(cp[cp_nodes].get("id"))
+        ret = dnac.command_run([f"show lisp instance-id {lispinstance} ethernet server {host}",
+                                f"show lisp instance-id {lispinstance} ethernet server address-resolution",
+                                f"show lisp instance-id {lispinstance} ethernet server {host} registration-history",
+                                f"show ip dhcp snooping binding {host}"
+                                ], cpid)
+        for responses in ret:
+            print(responses["output"])
+            ParseCommands.ParseSingleDev(responses["output"], responses["host"], debug_core)
     cp = dnac_core.get(["devices", dnac.fabric, "BORDERNODE"])
     cpid = []
-    for cp_nodes in cp.keys():
-        cpid.append(cp[cp_nodes].get("id"))
-    ret = dnac.command_run([f"show lisp instance-id {lispinstance} ethernet map-cache {host}",
-                            f"show device-tracking database mac {host}",
-                            ], cpid)
-    for responses in ret:
-        print(responses["output"])
-        ParseCommands.ParseSingleDev(responses["output"], responses["host"], debug_core)
+    if cp is not None:
+        for cp_nodes in cp.keys():
+            cpid.append(cp[cp_nodes].get("id"))
+        ret = dnac.command_run([f"show lisp instance-id {lispinstance} ethernet map-cache {host}",
+                                f"show device-tracking database mac {host}",
+                                ], cpid)
+        for responses in ret:
+            print(responses["output"])
+            ParseCommands.ParseSingleDev(responses["output"], responses["host"], debug_core)
     l3eid = debug_core.get(["Global", "Device-tracking"])
     if l3eid is not None:
         for hostnames in l3eid.keys():
@@ -301,15 +308,25 @@ def Eth_Host_Check(dnac, dnac_core, host):
         if hosttotal in fabric[instances].keys():
             whereits.append(instances)
     if len(whereits) == 0:
-        print(f"Not found mac address ")
-        return
+        insta = input(f"Not found MacAddress, what Instance would you like to use (or q to quit): ")
+        loc = dnac_core.get(["fabric"])
+        if re.match(r"[89]\d\d\d",insta):
+           if insta in loc.keys():
+               whereits.append(insta)
+           else:
+               print(f"Instance {insta} not found in fabric")
+               return
+        else:
+            print(f"Instance {insta} not a valid instance-id")
+            return
     elif len(whereits) > 1:
         # print(f"found it in instances {whereits}")
         pass
     else:
         pass
         print(f"found it in instances {whereits}")
-    Eth_L2_check(dnac, dnac_core, debug_core, whereits[0], hosttotal, host)
+    print (whereits)
+    #Eth_L2_check(dnac, dnac_core, debug_core, whereits[0], hosttotal, host)
 
 
 def ListEndStations(dnac, dnac_core):
@@ -478,17 +495,13 @@ def Menu(dnac, dnac_core):
         print(f"3: LISP Map cache consistency")
         print(f"4: IP reachability checks")
         print(f"5: Authentication and CTS enviroment checking")
-        print(f"6: Endpoint check by Layer 2 Address")
-        print(f"7: Endpoint check by Layer 3 Address")
-        print(f"8: FEW AccessPoint checks(under development)")
-        print(f"9: IP Multicast Underlay checks")
+        print(f"6: Data Collection based on Endpoint")
+        print(f"7: IP Multicast Underlay checks")
         print(f"d: Dump Datastructures")
         print(f"r: New Fabric Selection")
         print(f"q: Quit")
         choice = input("Choice:").lower()
-        if choice == "6":
-            Layer2Choose(dnac, dnac_core)
-        elif choice == "1":
+        if choice == "1":
             SessionAnalysis(dnac, dnac_core)
         elif choice == "2":
             DatabaseAnalysis(dnac, dnac_core)
@@ -498,8 +511,6 @@ def Menu(dnac, dnac_core):
             ReachabilityAnalysis(dnac, dnac_core)
         elif choice == "5":
             CTSAnalysis(dnac, dnac_core)
-        elif choice == "7":
-            Layer3Choose(dnac, dnac_core)
         elif choice == "9":
             McastUnderlay(dnac, dnac_core)
         elif choice == "d":
@@ -508,6 +519,8 @@ def Menu(dnac, dnac_core):
             return
         elif choice == "q":
             exit()
+        elif choice == "6":
+            Analysis.Digger(dnac,dnac_core)
 
 
 def main(argv):
@@ -515,8 +528,9 @@ def main(argv):
     username = None
     password = None
     fabric = None
+    logdir = None
     try:
-        opts, args = getopt.getopt(argv, "hd:u:p:f:", ["directory="])
+        opts, args = getopt.getopt(argv, "hd:u:p:f:d:l:", ["directory="])
     except getopt.GetoptError:
         print('SDA_Digger.py -d <DNAC IP> -u <username> -p <password> -f <fabric>')
         sys.exit(2)
@@ -532,13 +546,15 @@ def main(argv):
             password = arg
         elif opt in "-f":
             fabric = arg
+        elif opt in "-l":
+            logdir = arg
     if dnac is None:
         dnac = input("DNAC IP address :")
     if username is None:
         username = input("username :")
     if password is None:
         password = getpass()
-    dnac = DNAC_Connector.DnacCon(dnac, username, password)
+    dnac = DNAC_Connector.DnacCon(dnac, username, password,logdir)
     while True:
         dnac_core = AnalysisCore.Analysis_Core()
         build_hierarch(dnac, dnac_core)

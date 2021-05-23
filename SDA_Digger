@@ -532,7 +532,7 @@ def main(argv):
     try:
         opts, args = getopt.getopt(argv, "hd:u:p:f:d:l:", ["directory="])
     except getopt.GetoptError:
-        print('SDA_Digger.py -d <DNAC IP> -u <username> -p <password> -f <fabric>')
+        print('SDA_Digger.py -d <DNAC IP> -u <username> -p <password> -f <fabric> -l <logdirectory')
         sys.exit(2)
     for opt, arg in opts:
         if opt == '-h':

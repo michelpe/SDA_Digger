@@ -808,9 +808,23 @@ def ListEndStationsDevice(dnac, dnac_core):
 
 
 def digger_commands(dnac, dnac_core, hostname, dataset):
-    f = open("dig_commands.txt", "r")
-    dig_cmd = []
-    for line in f.readlines():
+    digfile = open("dig_commands.txt", "r")
+    edgedig_cmd = []
+    borderdig_cmd = []
+    cpdig_cmd = []
+    digcommands=digfile.readlines()
+    digfile.close()
+    cpid = []
+    borderid =[]
+    if dnac_core.get(["devices", dnac.fabric, "MAPSERVER"]) is not None:
+        cpip=(dnac_core.get(["devices", dnac.fabric, "MAPSERVER"]))
+        for device in cpip.keys():
+            cpid.append(cpip[device]["id"])
+    if dnac_core.get(["devices", dnac.fabric, "BORDERNODE"]) is not None:
+        borderip=(dnac_core.get(["devices", dnac.fabric, "BORDERNODE"]))
+        for device in borderip.keys():
+            borderid.append(borderip[device]["id"])
+    for line in digcommands:
         splitline = line.split(":")
         cmdsplit = splitline[-1].strip()
         cmdbuild = []
@@ -825,13 +839,37 @@ def digger_commands(dnac, dnac_core, hostname, dataset):
                     allparsed = False
             cmdbuild.append(cmdpart)
         if allparsed is True:
-            dig_cmd.append(" ".join(cmdbuild))
-    rlocuid = dnac.topo['hostnames'][hostname]
-    ret = dnac.command_run(dig_cmd,
-                           [rlocuid])
-    for responses in ret:
-        print(responses["output"])
-        ParseCommands.ParseSingleDev(responses["output"], responses["host"], dnac_core)
+            if re.match(r".*EDGE",splitline[1]):
+                edgedig_cmd.append(" ".join(cmdbuild))
+            elif re.match(r".*CP", splitline[1]):
+                cpdig_cmd.append(" ".join(cmdbuild))
+            elif re.match(r".*BORDER", splitline[1]):
+                borderdig_cmd.append(" ".join(cmdbuild))
+
+    if len(edgedig_cmd)!=0:
+        # executing Edge commands (if any)
+        rlocuid = dnac.topo['hostnames'][hostname]
+        ret = dnac.command_run(edgedig_cmd,
+                               [rlocuid])
+        for responses in ret:
+            print(responses["output"])
+            ParseCommands.ParseSingleDev(responses["output"], responses["host"], dnac_core)
+
+    if len(borderdig_cmd) != 0:
+        # executing Border commands (if any)
+        ret = dnac.command_run(borderdig_cmd,
+                               borderid)
+        for responses in ret:
+            print(responses["output"])
+            ParseCommands.ParseSingleDev(responses["output"], responses["host"], dnac_core)
+    if len(cpdig_cmd) != 0:
+        #executing CP commands (if any)
+        ret = dnac.command_run(cpdig_cmd,
+                               cpid)
+        for responses in ret:
+            print(responses["output"])
+            ParseCommands.ParseSingleDev(responses["output"], responses["host"], dnac_core)
+
     return
 
 
@@ -872,13 +910,23 @@ def Device2Mac(dnac, dnac_core, debug_core, inp):
                     entries[str(i)]["ipv4"]=ip
                     entries[str(i)]["ipv4tot"] = ip + '\32'
                     entries[str(i)]["vrf"] = vrf
+                    l3info = dnac_core.get(["lisp", "config", inp, "vlan_vrf",vrf])
+                    if l3info is not None:
+                        entries[str(i)]["l3inst"] = l3info['instance']
+                        print(l3info['instance'])
                 if l2dat is not None:
                     entries[str(i)]["l2inst"] = l2dat['instance']
-    while True:
+    if len(entries.keys())==0:
+        print(f"No Endpoints found on {inp}")
+        return
+    while len(entries.keys())>0:
         choice = input("What entry should be used:")
         if choice in entries.keys():
             digger_commands(dnac, dnac_core, inp, entries[choice])
             return
+        elif choice == "q":
+            return
+
     return
 
 

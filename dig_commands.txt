@@ -20,4 +20,4 @@
 1:XE_BORDER:show ip bgp vpnv4 vrf $vrf
 1:XE_BORDER:show ip route vrf $vrf $ipv4
 1:XE_BORDER:show lisp instance-id $l3inst ipv4 map-cache $ipv4
-1:XE_WLC:show wireless client mac-address $macaddress
+1:XE_WLC:show wireless client mac-address $macaddress detail

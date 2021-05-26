@@ -905,7 +905,7 @@ def Device2Mac(dnac, dnac_core, debug_core, inp):
     entries = {}
     for vlan in mactable.keys():
         for macaddress in mactable[vlan].keys():
-            if re.match(r".*/.*", mactable[vlan][macaddress]['Int']):
+            if re.match(r".*/.*", mactable[vlan][macaddress]['Int']) or re.match(r".*Ac*", mactable[vlan][macaddress]['Int']):
                 i = i + 1
                 ip = mac2ip(dttable, vlan, macaddress)
                 inter = mactable[vlan][macaddress]['Int']

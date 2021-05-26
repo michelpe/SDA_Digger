@@ -9,11 +9,11 @@ from ParseAccessTunnel import *
 def version(output, key, hostname,dnac_core):
     return
 
-def ParseWireless(output, key, hostname):
+def ParseWireless(output, key, hostname,dnac_core):
     return
 
 
-def ParseAP(output, key, hostname):
+def ParseAP(output, key, hostname,dnac_core):
     return
 
 

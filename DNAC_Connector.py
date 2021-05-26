@@ -113,6 +113,9 @@ class DnacCon:
                     ret = (res.read())
                     print(
                         f"Internal Error encountered {ret} (bapi errors often resolved by disabling/enabling the RESTAPI bundle under platform/manager")
+                if res.status == 401:
+                    ret = (res.read())
+                    self.get_token()
                 elif res.status == 429:
                     print(f"Exceeded limit for API calls calling {url}, pausing for 60 seconds")
                     time.sleep(60)

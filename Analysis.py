@@ -807,11 +807,12 @@ def ListEndStationsDevice(dnac, dnac_core):
     return
 
 
-def digger_commands(dnac, dnac_core, hostname, dataset):
+def digger_commands(dnac, dnac_core,debug_core, hostname, dataset):
     digfile = open("dig_commands.txt", "r")
     edgedig_cmd = []
     borderdig_cmd = []
     cpdig_cmd = []
+    wlan_cmd = []
     digcommands=digfile.readlines()
     digfile.close()
     cpid = []
@@ -845,6 +846,8 @@ def digger_commands(dnac, dnac_core, hostname, dataset):
                 cpdig_cmd.append(" ".join(cmdbuild))
             elif re.match(r".*BORDER", splitline[1]):
                 borderdig_cmd.append(" ".join(cmdbuild))
+            elif re.match(r".*WLC", splitline[1]):
+                wlan_cmd.append(" ".join(cmdbuild))
 
     if len(edgedig_cmd)!=0:
         # executing Edge commands (if any)
@@ -853,7 +856,7 @@ def digger_commands(dnac, dnac_core, hostname, dataset):
                                [rlocuid])
         for responses in ret:
             print(responses["output"])
-            ParseCommands.ParseSingleDev(responses["output"], responses["host"], dnac_core)
+            ParseCommands.ParseSingleDev(responses["output"], responses["host"], debug_core)
 
     if len(borderdig_cmd) != 0:
         # executing Border commands (if any)
@@ -861,15 +864,23 @@ def digger_commands(dnac, dnac_core, hostname, dataset):
                                borderid)
         for responses in ret:
             print(responses["output"])
-            ParseCommands.ParseSingleDev(responses["output"], responses["host"], dnac_core)
+            ParseCommands.ParseSingleDev(responses["output"], responses["host"], debug_core)
     if len(cpdig_cmd) != 0:
         #executing CP commands (if any)
         ret = dnac.command_run(cpdig_cmd,
                                cpid)
         for responses in ret:
             print(responses["output"])
-            ParseCommands.ParseSingleDev(responses["output"], responses["host"], dnac_core)
-
+            ParseCommands.ParseSingleDev(responses["output"], responses["host"], debug_core)
+    if len(cpdig_cmd) != 0:
+        #executing CP commands (if any)
+        print(dnac.wlc.get('uuid'))
+        if dnac.wlc.get('uuid') is not None:
+            ret = dnac.command_run(wlan_cmd,
+                                   [dnac.wlc.get('uuid')])
+            for responses in ret:
+                print(responses["output"])
+                ParseCommands.ParseSingleDev(responses["output"], responses["host"], debug_core)
     return
 
 
@@ -922,7 +933,7 @@ def Device2Mac(dnac, dnac_core, debug_core, inp):
     while len(entries.keys())>0:
         choice = input("What entry should be used:")
         if choice in entries.keys():
-            digger_commands(dnac, dnac_core, inp, entries[choice])
+            digger_commands(dnac, dnac_core, debug_core, inp, entries[choice])
             return
         elif choice == "q":
             return

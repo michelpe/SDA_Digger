@@ -115,6 +115,8 @@ def find_wlc(dnac, dnac_core, resp):
                     primarywlc = attributes.get("primaryWlc")
                     if primarywlc is not None:
                         dnac.wlc["uuid"] = primarywlc
+                        dnac.topo['reach'][primarywlc] ="Reachable"
+
     if dnac.wlc.get("uuid") is not None:
         resp = dnac.geturl(f"/dna/intent/api/v1/network-device/{dnac.wlc.get('uuid')}")
         response = resp.get("response")
@@ -122,6 +124,8 @@ def find_wlc(dnac, dnac_core, resp):
             for key in response.keys():
                 dnac.wlc[key] = response[key]
         print(f"Found Wireless LAN Controller {dnac.wlc.get('hostname')} in fabric {dnac.fabric}")
+        dnac.topo["devices"][dnac.wlc[key]] = dnac.wlc.get('hostname')
+
     return
 
 

@@ -23,6 +23,7 @@ class DnacCon:
         self.fabric = ""
         self.wlc = {}
         self.devices = {}
+        self.debug = False
         time.localtime()
         self.logdir = f"log{time.localtime().tm_mon}{time.localtime().tm_mday}_{time.localtime().tm_hour}" \
                       f"{time.localtime().tm_min}"
@@ -175,7 +176,8 @@ class DnacCon:
                 else:
                     for command in single_resp['commandResponses']['FAILURE']:
                         for failed_cli in single_resp['commandResponses']["FAILURE"].keys():
-                            print (f"Failed command : {failed_cli}")
+                            if self.debug is True:
+                                print (f"Failed command : {failed_cli}")
                         #print(single_resp['commandResponses']["FAILURE"].keys())
 
                     pass

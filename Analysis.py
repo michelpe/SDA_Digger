@@ -193,6 +193,12 @@ def LispDBAnalysis(dnac, dnac_core):
             else:
                 local_addr = []
             # print(lispdb.get(edgename).get(edgeinstance).keys())
+            wlcdb = dnac_core.get(["lisp","wlcip"])
+            if wlcdb is not None:
+                wlcip = wlcdb["ip addresses"]
+            else:
+                wlcip = []
+
             for edgeeid in lispdb.get(edgename).get(edgeinstance).keys():
                 # print (edgeeid)
                 if lispdb.get(edgename).get(edgeinstance).get(edgeeid).get("eSource") is not "dynamic-eid":
@@ -210,6 +216,8 @@ def LispDBAnalysis(dnac, dnac_core):
                                 if rloc == edgeip:
                                     pass
                                 elif rloc == "--":
+                                    pass
+                                elif rloc in wlcip:
                                     pass
                                 else:
                                     success = False
@@ -423,27 +431,34 @@ def CheckLispSession(dnac, dnac_core):
         devices.append(edgenodes[edge]["name"])
     esession = fsession = fails = 0
     for device in set(devices):
-        sesdb = dnac_core.get(['lisp', 'session', device]).keys()
-        for session in cpnodes:
-            cpname = dnac_core.get(['devices', dnac.fabric, 'MAPSERVER', session])["name"]
-            if session not in sesdb:
-                if cpname == device:
-                    pass
-                else:
-                    fsession = fsession + 1
-                    print(f"Session Analysis: CP session to {cpname} not present on {device}")
-            else:
-                print(f"Session Analysis: CP session to {cpname} present on {device}")
-                esession = esession + 1
-                if dnac_core.get(['lisp', 'session', device]).get(session).get('status') == "Down":
-                    if dnac_core.get(['lisp', 'database', device]) is None:
-                        print(f"Informational:Session Down on device {device} but no Database entries found")
+        sesdbraw = dnac_core.get(['lisp', 'session', device])
+        if sesdbraw is not None:
+            sesdb = dnac_core.get(['lisp', 'session', device]).keys()
+            for session in cpnodes:
+                cpname = dnac_core.get(['devices', dnac.fabric, 'MAPSERVER', session])["name"]
+                if session not in sesdb:
+                    if cpname == device:
+                        pass
                     else:
+                        fsession = fsession + 1
+                        print(f"Session Analysis: CP session to {cpname} not present on {device}")
+                else:
+                    print(f"Session Analysis: CP session to {cpname} present on {device}")
+                    esession = esession + 1
+                    users = dnac_core.get(['lisp', 'session', device]).get(session).get('Users')
+                    if dnac_core.get(['lisp', 'session', device]).get(session).get('status') == "Down":
+                        if dnac_core.get(['lisp', 'database', device]) is None:
+                            print(f"Informational:Session Down on device {device} but no Database entries found")
+                        else:
+                            print(
+                                f"Session Analysis: {device} has LISP session in Down state to {cpname} with Database Entries present")
+                            fails = fails + 1
+                    elif int(users) < 2:
                         print(
-                            f"Session Analysis: {device} has LISP session in Down state to {cpname} with Database Entries present")
-                        fails = fails + 1
+                            f"Session Analysis: {device} has LISP session in Up state to {cpname} but only has {users} Users. ")
+
     print(
-        f"Session Analysis: Checked LISP sessions on {len(devices)} nodes towards {len(cpnodes)} CP nodes. Found {esession} sessions, missing {fsession}, failures {fails}")
+        f"Session Analysis: Checked LISP sessions on {len(set(devices))} nodes towards {len(cpnodes)} CP nodes. Found {esession} sessions, missing {fsession}, failures {fails}")
     return
 
 
@@ -874,7 +889,6 @@ def digger_commands(dnac, dnac_core,debug_core, hostname, dataset):
             ParseCommands.ParseSingleDev(responses["output"], responses["host"], debug_core)
     if len(cpdig_cmd) != 0:
         #executing CP commands (if any)
-        print(dnac.wlc.get('uuid'))
         if dnac.wlc.get('uuid') is not None:
             ret = dnac.command_run(wlan_cmd,
                                    [dnac.wlc.get('uuid')])
@@ -924,7 +938,6 @@ def Device2Mac(dnac, dnac_core, debug_core, inp):
                     l3info = dnac_core.get(["lisp", "config", inp, "vlan_vrf",vrf])
                     if l3info is not None:
                         entries[str(i)]["l3inst"] = l3info['instance']
-                        print(l3info['instance'])
                 if l2dat is not None:
                     entries[str(i)]["l2inst"] = l2dat['instance']
     if len(entries.keys())==0:

@@ -24,6 +24,7 @@ class DnacCon:
         self.wlc = {}
         self.devices = {}
         self.debug = False
+        self.crunnerretry = 0
         time.localtime()
         self.logdir = f"log{time.localtime().tm_mon}{time.localtime().tm_mday}_{time.localtime().tm_hour}" \
                       f"{time.localtime().tm_min}"
@@ -162,10 +163,14 @@ class DnacCon:
         while "endTime" not in tresp["response"].keys():
             i=i+1
             time.sleep(1)
+            if i % 5 == 0:
+                print(f"o",end="")
             tresp = self.geturl(resp["response"]["url"])
             if i > 300 :
                 print(f"Timeout exceeded, exiting")
                 exit()
+        if i>30:
+            print(f"\nNotice: Slow response from DNAC running Command runner, response took {i} seconds)")
         fileId = json.loads(tresp["response"]["progress"])
         fresp = self.geturl(f"/dna/intent/api/v1/file/{fileId['fileId']}")
         # print (fresp)
@@ -181,8 +186,7 @@ class DnacCon:
                         for failed_cli in single_resp['commandResponses']["FAILURE"].keys():
                             if self.debug is True:
                                 print (f"Failed command : {failed_cli}")
-                        #print(single_resp['commandResponses']["FAILURE"].keys())
-
+                        #print(single_resp['commandResponses']["FAILURE"])
                     pass
         combined = {}
         olddir = os.getcwd()
@@ -212,28 +216,68 @@ class DnacCon:
             if len(cmds) > 3 or i == len(commands):
                 print(f".",end="")
                 tret.extend(self.command_run_batch(cmds, devs))
-                #print (f"{devs} {cmds}")
                 t = 0
                 cmds=[]
         return tret
 
+    def update_reachable(self):
+       tre = self.geturl("/dna/intent/api/v1/network-device?reachabilityStatus=Unreachable")
+       response=tre['response']
+       unreach_ids = set()
+       for un_devs in response:
+           unreach_ids.add(un_devs['id'])
+       for device in self.topo['reach'].keys():
+           if device in unreach_ids:
+               self.topo['reach']=="Unreachable"
+           else:
+               self.topo['reach']=="Reachable"
+       return
+
 
     def command_run(self, commands, devs):
+        ttret = []
+        if self.crunnerretry > 10 :
+            return None
         print(f"Requesting {len(commands)} commands on {len(devs)} device(s) via {self.DNAC}")
+        self.update_reachable()
         tret = []
+        ttret = []
         i=0
         t=0
         devices = []
+        devicenames = set()
         for dev in devs:
-            if self.topo['reach'][dev]=="Reachable":
+            if self.topo['reach'][dev].lower()!="unreachable":
                 devices.append(dev)
+                devicenames.add(self.topo['devices'][dev])
                 i = i + 1
                 t = t + 1
                 if len(devices) > 4 or i == len(devs):
-
                     tret.extend(self.command_run_dev_batch(commands, devices))
                     t = 0
                     devices=[]
-        print(f" Completed")
+            else:
+                print(f"skipping device {self.topo['devices'][dev]} in state {self.topo['reach'][dev]}")
+        sucdevs= set()
+        for tre in tret:
+            succeshost =tre.get('host')
+            if succeshost not in sucdevs and not None:
+                sucdevs.add(succeshost)
+        sucset=devicenames.difference(sucdevs)
+        if len(sucset) >0:
+            print(f"Command runner failed on {len(sucset)} devices {sucset} retrying")
+            retrydevs = []
+            for devs in sucset:
+                self.crunnerretry = self.crunnerretry + 1
+                retrydevs.append(self.topo['hostnames'][devs])
+            resp=self.command_run(commands,retrydevs)
+            if resp is not None:
+                tret.extend(resp)
+        self.crunnerretry = self.crunnerretry -1
+        if self.crunnerretry < 1 :
+            print ("\nCompleted")
+            self.crunnerretry = 0
+        if tret is None:
+            tret["response"]={}
         return tret
 

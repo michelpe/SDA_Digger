@@ -176,13 +176,15 @@ def LispSession(output, hostname, dnac_core):
         if len(splitline) > 1:
             if re.match(r"\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}", splitline[0]):
                 tlisp = splitline[0].split(":")
-                tdict[tlisp[0]] = {"status": splitline[1], "age": splitline[2], "port": tlisp[-1]}
+                tdict[tlisp[0]] = {"status": splitline[1], "age": splitline[2], "port": tlisp[-1], "Users": splitline[-1]}
     #                if re.match(r"[Uu][Pp]", splitline[1]):
     #                    LogIt("Notice: Lisp Session to %s is %s on device %s" % (splitline[0], splitline[1], hostname), 7)
     #                else:
     #                    LogIt("Error: Lisp Session to %s is %s on device %s" % (splitline[0], splitline[1], hostname), 7)
     if len(tdict) != 0:
         dnac_core.add(["lisp", "session", hostname, tdict])
+    return
+
 
 
 def LispSite(output, hostname, dnac_core):

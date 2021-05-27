@@ -1,5 +1,6 @@
 1:XE_EDGE:show ip route vrf $vrf $ipv4
 1:XE_EDGE:show ip  cef vrf $vrf $ipv4
+1:XE_EDGE:show ip  arp vrf $vrf $ipv
 1:XE_EDGE:show version
 1:XE_EDGE:show lisp instance-id $l2inst ethernet database $macaddress
 1:XE_EDGE:show lisp instance-id $l2inst ethernet database address-resolution $macaddress
@@ -12,12 +13,20 @@
 1:XE_EDGE:show mac address-table address $macaddress
 1:XE_EDGE:show access-session mac $macaddress detail
 1:XE_EDGE:show spanning-tree interface $interface 
+1:XE_EDGE:show cts role-based counters 
+1:XE_EDGE:sh cts role-based permissions 
+1:XE_EDGE:sh lisp instance-id $l2inst statistics
+1:XE_EDGE:sh lisp instance-id $l3inst statistics
 1:XE_CP:show lisp instance-id $l2inst ethernet server 
 1:XE_CP:show lisp instance-id $l2inst ethernet server $macaddress
 1:XE_CP:show lisp instance-id $l2inst ethernet server address-resolution
 1:XE_CP:show lisp instance-id $l2inst ethernet server $macaddress registration-history
+1:XE_CP:sh lisp instance-id $l2inst statistics
+1:XE_CP:sh lisp instance-id $l3inst statistics
+1:XE_BORDER:sh lisp instance-id $l2inst statistics
+1:XE_BORDER:sh lisp instance-id $l3inst statistics
 1:XE_BORDER:show ip cef vrf $vrf $ipv4 internal
-1:XE_BORDER:show ip bgp vpnv4 vrf $vrf
+1:XE_BORDER:show ip bgp vpnv4 vrf $vrf $ip
 1:XE_BORDER:show ip route vrf $vrf $ipv4
 1:XE_BORDER:show lisp instance-id $l3inst ipv4 map-cache $ipv4
 1:XE_WLC:show wireless client mac-address $macaddress detail

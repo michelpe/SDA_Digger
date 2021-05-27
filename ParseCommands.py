@@ -146,6 +146,30 @@ def ParseMTU(output,hostname,dnac_core):
     dnac_core.add(["Global","MTU", hostname,{"MTU": MTU}])
     return
 
+def ParseWLCConfig(output, hostname,dnac_core):
+    tdict = {"interfaces": {}}
+    output = re.split(r"\n", output)
+    splits = splititup(output, "^!")
+    ips=set()
+    for splitted in splits:
+        if len(splitted) > 1:
+            if re.match(r"^interface ", splitted[1]):
+                interface = splitted[1].split()[-1]
+                for line in splitted[1:]:
+                    if (r".*ip address \d.*}"):
+                        section = line.split()
+                        if len(section)==4:
+                            tdict["interfaces"][interface]=section[2]
+                            ips.add(section[2])
+            elif re.match(r"^ap ", splitted[1]):
+                print(splitted[1:])
+    for line in output:
+     if re.match(r" *wireless management interface",line):
+         tdict["management"]=line.split()[-1]
+    dnac_core.add(["Global","WLC_Config", hostname,tdict])
+    dnac_core.add(["lisp","wlcip",{"ip addresses":list(ips)}])
+    return
+
 
 def ParseConfig(output, hostname,dnac_core):
     output = re.split(r"\n", output)

@@ -258,16 +258,6 @@ def DatabaseAnalysis(dnac, dnac_core):
             ParseCommands.ParseSingleDev(responses["output"], responses["host"], dnac_core)
         print(f"Completed import on {len(edges)} edges")
     failed = Analysis.LispDBAnalysis(dnac, dnac_core)
-    if len(failed) > 0:
-        answer = input("Failed EID detected, do you want to dig deeper y/n:")
-        print (failed)
-        print(answer)
-        if answer.lower() == 'y':
-            for fail in failed:
-                IP_Host_Check(dnac, dnac_core, fail)
-                answer = input("next y/n:")
-                if answer.lower() == "n":
-                    break
     printraw(ret)
     return
 

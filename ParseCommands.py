@@ -40,7 +40,7 @@ def IPRoute(output, hostname,dnac_core):
                     ip = splitline[1].split("/")[0]
                     dnac_core.modify(["Global", "Devices", hostname], 'IP Address', ip)
                     dnac_core.add(["Global", "IP", ip, {"Hostname": hostname}])
-                    LogIt(f"Notice: Extracted IP address {ip} from IP routing table for {hostname}", 7)
+                    #LogIt(f"Notice: Extracted IP address {ip} from IP routing table for {hostname}", 7)
     if len(iproute) > 0:
         dnac_core.add(["Global", "routing", hostname, {"Global": iproute}])
     return
@@ -235,6 +235,33 @@ def ParseAccess(output, key, hostname,dnac_core):
     return
 
 
+def ParseBFDdetail(output, key, hostname,dnac_core):
+    fake_handle =10000
+    for lines in output:
+        splitline = lines.split()
+        if len(splitline) >0 :
+            if re.match(r"^IPv4 Sessions",lines):
+                handle = fake_handle
+                fake_handle = fake_handle +1
+                tset = {}
+            elif re.match(r"\d{0,3}\.\d{0,3}\.\d{0,3}.\.\d{0,3}.",splitline[0]):
+                tset["neighbor"]= splitline[0]
+                tset["interface"]= splitline[-1]
+                tset["State"]=splitline[-2]
+            elif re.match(r"^handle",splitline[0].lower()):
+                handle = splitline[-1]
+            elif re.match(r"uptime", splitline[0].lower()):
+                tset["uptime"]=splitline[-1]
+                dnac_core.add(["Global","bfd",hostname,handle,tset] )
+    return
+
+
+def ParseBFD(output, key, hostname,dnac_core):
+    if key[-1] == "detail":
+        ParseBFDdetail(output, key, hostname, dnac_core)
+        return
+    return
+
 def ParseSingleDev(output, hostname,dnac_core):
         command = re.split (r"\n", output)[0]
         output = re.split(r"\n",output)
@@ -263,6 +290,8 @@ def ParseSingleDev(output, hostname,dnac_core):
                 ParseAccess(output, splitkey[1:], hostname,dnac_core)
             elif re.match(r"mac", splitkey[1]):
                 ParseMac(output, splitkey[1:], hostname,dnac_core)
+            elif re.match(r"bfd", splitkey[1]):
+                ParseBFD(output, splitkey[1:], hostname, dnac_core)
             elif len(splitkey) > 6:
                 if re.match(r"access-tunnel", splitkey[3]):
                     ParseAccessTunnel(output, splitkey[1:], hostname,dnac_core)

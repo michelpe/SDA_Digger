@@ -276,7 +276,7 @@ def MapCacheAnalysis(dnac, dnac_core):
 def ReachabilityAnalysis(dnac, dnac_core):
     devices_id_list = BuildIdlist(dnac, dnac_core, ["EDGENODE", "BORDERNODE"])
     if len(devices_id_list) > 0:
-        ret = dnac.command_run(["show ip route"], devices_id_list)
+        ret = dnac.command_run(["show ip route","show clns neigh detail", "show bfd neigh detail"], devices_id_list)
         for responses in ret:
             ParseCommands.ParseSingleDev(responses["output"], responses["host"], dnac_core)
     Analysis.CheckRLOCreach(dnac, dnac_core)

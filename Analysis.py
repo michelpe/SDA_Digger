@@ -61,7 +61,7 @@ def IP2name(device):
     return None
 
 
-def FindName(ipaddress):
+def FindName(dnac_core,ipaddress):
     devices = dnac_core.get(["Global", "Devices"])
     for device in devices:
         if device.get("IP Address") == ipaddress:
@@ -370,6 +370,33 @@ def Stats():
     print(f"Number of Fabric Enabled AP     : {totalap}")
     return
 
+def CheckBFD(dnac, dnac_core):
+    bfdb = dnac_core.get(["Global","bfd"])
+    if bfdb is None:
+        return
+    oksession = 0
+    sessions = 0
+    noksession = 0
+    for device in bfdb.keys():
+        for session in bfdb[device].keys():
+            uptime = bfdb[device][session]['uptime']
+            neigbor = bfdb[device][session]['neighbor']
+            interface = bfdb[device][session]['interface']
+            state = bfdb[device][session]['State']
+            sessions = sessions + 1
+            if state.lower() != "up":
+                print(
+                    f"BFD: Device {device} has BFD session {state} to neighbor {neigbor} on interface {interface}")
+                noksession = noksession + 1
+            elif re.match(r".*[wd].*",uptime):
+                oksession = oksession +1
+            else:
+                print (f"BFD: Device {device} has BFD session uptime lower then 1 day ({uptime}) to neighbor {neigbor} on interface {interface}")
+                noksession = noksession +1
+    print(f"BFD: Checked {len(bfdb.keys())} , Stable sessions {oksession}, short sessions {noksession} ")
+
+
+
 
 def CheckRLOCreach(dnac, dnac_core):
     # devices = dnac_core.get(["lisp", "roles"])
@@ -389,7 +416,11 @@ def CheckRLOCreach(dnac, dnac_core):
         reachtotal = reachtotal + 1
     iptables = dnac_core.get(["Global", "routing"])
     for lispdevice in rlocnames:
-        iptable = set(iptables[lispdevice]["Global"])
+        if lispdevice in iptables.keys():
+            iptable = set(iptables[lispdevice]["Global"])
+        else:
+            print (f"Notice: Routing table of {lispdevice} not gathered, skipping")
+            break
         if set(rlocips).issubset(iptable):
             reachsuccess = reachsuccess + 1
             pass
@@ -401,6 +432,7 @@ def CheckRLOCreach(dnac, dnac_core):
     print(
         f"Reachability Analysis: Fabric Devices with full (/32) reachabily {reachsuccess}, devices without full reachability {reachfail}," +
         f" not checked {reachtotal - (reachsuccess + reachfail)}")
+    CheckBFD(dnac, dnac_core)
     return
 
 
@@ -946,6 +978,13 @@ def Device2Mac(dnac, dnac_core, debug_core, inp):
     while len(entries.keys())>0:
         choice = input("What entry should be used:")
         if choice in entries.keys():
+            destip = input("(Optional)Destination IP: ")
+            if re.match(r"\d{0,3}\.\d{0,3}\.\d{0,3}.\.\d{0,3}.", destip):
+                entries[choice]["ipdest"]=destip
+            destmac = input("(Optional) Destination Mac: ")
+            if re.match(r".{4}\..{4}\..{4}", destmac):
+                entries[choice]["macdest"]=destmac
+            print(entries[choice])
             digger_commands(dnac, dnac_core, debug_core, inp, entries[choice])
             return
         elif choice == "q":

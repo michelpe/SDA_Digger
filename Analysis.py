@@ -201,7 +201,7 @@ def LispDBAnalysis(dnac, dnac_core):
 
             for edgeeid in lispdb.get(edgename).get(edgeinstance).keys():
                 # print (edgeeid)
-                if lispdb.get(edgename).get(edgeinstance).get(edgeeid).get("eSource") is not "dynamic-eid":
+                if lispdb.get(edgename).get(edgeinstance).get(edgeeid).get("eSource") != "dynamic-eid":
                     edgeeid = edgeeid.split(",")[0]
                     if edgeeid.split('/')[0] in local_addr:
                         # print(  f"Debug: {edgename} {edgeinstance} {edgeeid} {edgeinstanceaf} is local address")
@@ -715,7 +715,7 @@ def DatabaseTooFabric(dnac, dnac_core):
                         elif re.match(r"^other.*", eidtype):
                             leids = leids + 1
                         stateids = stateids + 1
-                    elif eidtest is 'local':
+                    elif eidtest == 'local':
                         pass
                     else:
                         LogIt(

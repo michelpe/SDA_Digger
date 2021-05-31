@@ -805,14 +805,16 @@ def Config2Fabric(dnac, dnac_core):
 def UnderlayMcastAnalysis(dnac, dnac_core, mcastunder):
     devinstances = dnac_core.get(["lisp", "config"])
     mcastdevices = []
+    instances = set()
     for mcastgr in mcastunder:
         underlay = dnac_core.get(["Global", "underlay mroute", mcastgr])
         for device in devinstances.keys():
             for instance in devinstances[device]['instances'].keys():
                 if devinstances[device]['instances'][instance]['broadcast'] == mcastgr:
                     mcastdevices.append(device)
+                    instances.add(instance)
         mcastdevices = list(set(mcastdevices))
-        print(f"Checking mcast for Layer 2 flood groups {mcastgr} on {len(mcastdevices)} devices")
+        print(f"Checking mcast for Layer 2 flood group(s) {mcastgr} on {len(mcastdevices)} devices")
         for mcastdevice in mcastdevices:
             minfo = dnac_core.get(["Global", "underlay mroute", mcastgr, mcastdevice])
             devip = dnac_core.get(["Global", "Devices", mcastdevice]).get("IP Address")
@@ -824,8 +826,19 @@ def UnderlayMcastAnalysis(dnac, dnac_core, mcastunder):
                     print(
                         f"Underlay Mcast: Device {mcastdevice} is showing {minfo[devip]['RPF']} for source {devip}(self) to {mcastgr}")
             else:
+                for instance in instances:
+                    vlan = dnac_core.get(["lisp", "config",mcastdevice,"instances",instance]).get("value")
+                    if vlan is not None:
+                        mactable = devinstances = dnac_core.get(["Global", "mac",mcastdevice,vlan])
+                        nummacs = 0
+                        for mac in mactable:
+                            if re.match(r"^Vl.*",mactable[mac].get("Int")):
+                                pass
+                            else:
+                                nummacs = nummacs +1
                 print(
-                    f"Underlay Mcast: Device {mcastdevice} has no Mroute with itself as  sender({devip}) to {mcastgr}")
+                    f"Underlay Mcast: Device {mcastdevice} has no Mroute with itself as sender({devip}) to {mcastgr} , "
+                    f"{nummacs} endpoints present in IP pools with flooding")
     return
 
 

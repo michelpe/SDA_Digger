@@ -192,6 +192,7 @@ def Build_Lisp_Fabric(dnac, dnac_core, fabric):
                 break
     else:
         print(f"No fabrics found, exiting")
+        exit()
     # print(dnac_core.printit())
 
 
@@ -297,6 +298,7 @@ def McastUnderlay(dnac, dnac_core):
         mcastcmds.append(f"show ip mroute {mcastgroups}")
         mcastcmds.append(f"show ip mfib {mcastgroups}")
         mcastcmds.append(f"show device-tracking database")
+        mcastcmds.append(f"show mac address-table")
     if len(devices_id_list) > 0:
         ret = dnac.command_run(mcastcmds, devices_id_list)
         for responses in ret:
@@ -348,8 +350,9 @@ def main(argv):
     password = None
     fabric = None
     logdir = None
+    debug = False
     try:
-        opts, args = getopt.getopt(argv, "hd:u:p:f:d:l:", ["directory="])
+        opts, args = getopt.getopt(argv, "hxd:u:p:f:d:l:", ["directory="])
     except getopt.GetoptError:
         print('SDA_Digger.py -d <DNAC IP> -u <username> -p <password> -f <fabric> -l <logdirectory>')
         sys.exit(2)
@@ -359,6 +362,8 @@ def main(argv):
             sys.exit()
         elif opt == "-d":
             dnac = arg
+        elif opt == "-x":
+            debug=True
         elif opt in "-u":
             username = arg
         elif opt in "-p":
@@ -374,6 +379,8 @@ def main(argv):
     if password is None:
         password = getpass()
     dnac = DNAC_Connector.DnacCon(dnac, username, password,logdir)
+    if debug == True:
+        dnac.debug=True
     while True:
         dnac_core = AnalysisCore.Analysis_Core()
         build_hierarch(dnac, dnac_core)

@@ -94,6 +94,8 @@ class DnacCon:
             'x-auth-token': self.token
         }
         realurl = f"https://{self.DNAC}{url}"
+        if self.debug is True:
+            print(f"Debug: Calling URL {realurl}")
         try:
             # conn = http.client.HTTPSConnection(self.DNAC, context=ssl._create_unverified_context())
             self.conn.request("GET", realurl, headers=headers)
@@ -129,7 +131,10 @@ class DnacCon:
                     exit(0)
                 else:
                     break
-        return json.loads(res.read())
+        content = res.read()
+        if self.debug is True:
+            print(f"Debug: Calling URL {json.loads(content)}")
+        return json.loads(content)
 
     def post(self, url, payload):
         # print (f"executing {url} with {payload}")

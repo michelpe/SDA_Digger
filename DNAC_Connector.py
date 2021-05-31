@@ -227,10 +227,11 @@ class DnacCon:
        for un_devs in response:
            unreach_ids.add(un_devs['id'])
        for device in self.topo['reach'].keys():
-           if device in unreach_ids:
-               self.topo['reach']=="Unreachable"
+           dname = self.topo['devices'][device]
+           if device in unreach_ids and device in self.topo['reach'].keys():
+               self.topo['reach'][device]="Unreachable"
            else:
-               self.topo['reach']=="Reachable"
+               self.topo['reach'][device]="Reachable"
        return
 
 
@@ -247,7 +248,7 @@ class DnacCon:
         devices = []
         devicenames = set()
         for dev in devs:
-            if self.topo['reach'][dev].lower()!="unreachable":
+            if (self.topo['reach'][dev])!= "Unreachable":
                 devices.append(dev)
                 devicenames.add(self.topo['devices'][dev])
                 i = i + 1

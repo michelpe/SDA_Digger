@@ -23,6 +23,8 @@
 1:XE_EDGE:sh lisp instance-id $l2inst ethernet statistics
 1:XE_EDGE:sh lisp instance-id $l3inst ipv4 statistics
 1:XE_EDGE:sh lisp instance-id $l3inst ipv6 statistics
+1:XE_EDGE:show bfd neigh detail
+1:XE_EDGE:show clns neigh detail
 1:XE_CP:show lisp instance-id $l2inst ethernet server 
 1:XE_CP:show lisp instance-id $l2inst ethernet server $macaddress
 1:XE_CP:show lisp instance-id $l2inst ethernet server $macdest

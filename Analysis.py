@@ -200,8 +200,9 @@ def LispDBAnalysis(dnac, dnac_core):
                 wlcip = []
 
             for edgeeid in lispdb.get(edgename).get(edgeinstance).keys():
-                # print (edgeeid)
-                if lispdb.get(edgename).get(edgeinstance).get(edgeeid).get("eSource") != "dynamic-eid":
+                #print (lispdb.get(edgename).get(edgeinstance).get(edgeeid).get("Source"))
+                #if lispdb.get(edgename).get(edgeinstance).get(edgeeid).get("eSource") != "dynamic-eid":
+                if "site-registration," not in lispdb.get(edgename).get(edgeinstance).get(edgeeid).get("Source"):
                     edgeeid = edgeeid.split(",")[0]
                     if edgeeid.split('/')[0] in local_addr:
                         # print(  f"Debug: {edgename} {edgeinstance} {edgeeid} {edgeinstanceaf} is local address")
@@ -984,7 +985,6 @@ def Device2Mac(dnac, dnac_core, debug_core, inp):
             destmac = input("(Optional) Destination Mac: ")
             if re.match(r".{4}\..{4}\..{4}", destmac):
                 entries[choice]["macdest"]=destmac
-            print(entries[choice])
             digger_commands(dnac, dnac_core, debug_core, inp, entries[choice])
             return
         elif choice == "q":
@@ -996,7 +996,7 @@ def Device2Mac(dnac, dnac_core, debug_core, inp):
 def Digger(dnac, dnac_core):
     debug_core = AnalysisCore.Analysis_Core()
     while True:
-        inp = input("Please enter Hostname of Fabric Device or list :")
+        inp = input("Please enter Hostname of Fabric Device or list: ")
         if inp == "quit" or inp == "q":
             return
         elif re.match(r"\d{0,3}\.\d{0,3}\.\d{0,3}.\.\d{0,3}.", inp):

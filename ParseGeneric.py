@@ -38,8 +38,8 @@ def CTSEnv(output, hostname,dnac_core):
             if re.match(r"^Current state", line):
                 ctsstate = splitline[-1]
                 if ctsstate != "COMPLETE":
-                tdict = {"State": ctsstate}
-                dnac_core.add(["Authentication", "CTS", "Devices", hostname, tdict])
+                    tdict = {"State": ctsstate}
+                    dnac_core.add(["Authentication", "CTS", "Devices", hostname, tdict])
     return
 
 

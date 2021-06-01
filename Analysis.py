@@ -1,5 +1,4 @@
 import AnalysisCore
-from Loggin import *
 import re
 import collections
 import ipaddress
@@ -7,6 +6,13 @@ import json
 import ParseCommands
 import os
 
+def LogIt(message, level):
+    if re.match(r"^debug", message.lower()):
+        pass
+    elif re.match(r"^notice", message.lower()):
+        print(message)
+    else:
+        print(message)
 
 def build_edge_list():
     devices = dnac_core.get(["lisp", "roles"])
@@ -50,7 +56,6 @@ def findip():
             IP = db2ip(device)
             if IP:
                 AnalysisCore.modify(["Global", "Devices", device], 'IP Address', IP)
-                LogIt(f"Notice: Extracted IP address {IP} from Database for {device}", 7)
     return
 
 

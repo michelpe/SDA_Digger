@@ -1,9 +1,7 @@
 import AnalysisCore
 import re
-
 from ParseLisp import *
 from ParseGeneric import *
-from ParseAccessTunnel import *
 
 
 def version(output, key, hostname,dnac_core):
@@ -40,7 +38,6 @@ def IPRoute(output, hostname,dnac_core):
                     ip = splitline[1].split("/")[0]
                     dnac_core.modify(["Global", "Devices", hostname], 'IP Address', ip)
                     dnac_core.add(["Global", "IP", ip, {"Hostname": hostname}])
-                    #LogIt(f"Notice: Extracted IP address {ip} from IP routing table for {hostname}", 7)
     if len(iproute) > 0:
         dnac_core.add(["Global", "routing", hostname, {"Global": iproute}])
     return
@@ -52,8 +49,6 @@ def CTSEnv(output, hostname,dnac_core):
         if len(splitline) > 0:
             if re.match(r"^Current state", line):
                 ctsstate = splitline[-1]
-                if ctsstate != "COMPLETE":
-                    LogIt(f"Error: CTS Enviroment in state {ctsstate}  on device {hostname}", 10)
                 tdict = {"State": ctsstate}
                 dnac_core.add(["Authentication", "CTS", "Devices", hostname, tdict])
     return
@@ -66,7 +61,6 @@ def ParseLoop0(output, hostname):
             if len(ip) > 1:
                 if (AnalysisCore.get(["Global", "Devices", hostname, 'IP Address'])) is None:
                     AnalysisCore.modify(["Global", "Devices", hostname], 'IP Address', ip[0])
-                    LogIt(f"Notice: Extracted IP address {ip[0]} from config for {hostname}", 7)
     return
 
 def IPMRoute(output, hostname,dnac_core):
@@ -262,6 +256,12 @@ def ParseBFD(output, key, hostname,dnac_core):
         return
     return
 
+def ParseAAA(output, key, hostname,dnac_core):
+    for line in output:
+        print (line)
+    return
+
+
 def ParseSingleDev(output, hostname,dnac_core):
         command = re.split (r"\n", output)[0]
         output = re.split(r"\n",output)
@@ -292,9 +292,12 @@ def ParseSingleDev(output, hostname,dnac_core):
                 ParseMac(output, splitkey[1:], hostname,dnac_core)
             elif re.match(r"bfd", splitkey[1]):
                 ParseBFD(output, splitkey[1:], hostname, dnac_core)
+            elif re.match(r"aaa", splitkey[1]):
+                ParseAAA(output, splitkey[1:], hostname, dnac_core)
             elif len(splitkey) > 6:
                 if re.match(r"access-tunnel", splitkey[3]):
-                    ParseAccessTunnel(output, splitkey[1:], hostname,dnac_core)
+                    #ParseAccessTunnel(output, splitkey[1:], hostname,dnac_core)
+                    pass
 
 
 def ParseCommand(fabriccli):

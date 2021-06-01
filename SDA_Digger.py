@@ -21,7 +21,7 @@ cts_cmd_list = [
     "sh cts rbacl", "sh cts authorization entries"]
 auth_cmd_list = [
     "show access-session method dot1x details",
-    "show access-session method mab details", "sh device-tracking database"]
+    "show access-session method mab details", "sh device-tracking database", "show aaa servers"]
 
 db_cmd_list = ["show lisp instance-id * ethernet database", "show lisp instance-id * ipv4 database",
                "show lisp instance-id * ipv6 database"]

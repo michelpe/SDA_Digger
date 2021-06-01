@@ -1,6 +1,4 @@
 import json
-from Loggin import LogIt
-
 
 class Analysis_Core:
     def __init__(self):
@@ -43,7 +41,6 @@ class Analysis_Core:
         t = self.get(clist[:-1])
         # print(f"command {t} {clist[:-1]}")
         if t is not None:
-            LogIt(f"Debug:duplicate entry, {clist} ", 20)
             return
         tlist = []
         tdict = {}

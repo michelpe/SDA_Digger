@@ -1,6 +1,5 @@
 import re
 import AnalysisCore
-from Loggin import *
 from ParseLisp import *
 
 
@@ -27,7 +26,6 @@ def IPRoute(output, hostname):
                     ip = splitline[1].split("/")[0]
                     AnalysisCore.modify(["Global", "Devices", hostname], 'IP Address', ip)
                     AnalysisCore.add2(["Global", "IP", ip, {"Hostname": hostname}])
-                    LogIt(f"Notice: Extracted IP address {ip} from IP routing table for {hostname}", 7)
     if len(iproute) > 0:
         AnalysisCore.add2(["Global", "routing", hostname, {"Global": iproute}])
     return
@@ -40,7 +38,6 @@ def CTSEnv(output, hostname,dnac_core):
             if re.match(r"^Current state", line):
                 ctsstate = splitline[-1]
                 if ctsstate != "COMPLETE":
-                    LogIt(f"Error: CTS Enviroment in state {ctsstate}  on device {hostname}", 10)
                 tdict = {"State": ctsstate}
                 dnac_core.add(["Authentication", "CTS", "Devices", hostname, tdict])
     return
@@ -53,7 +50,6 @@ def ParseLoop0(output, hostname):
             if len(ip) > 1:
                 if (AnalysisCore.get(["Global", "Devices", hostname, 'IP Address'])) is None:
                     AnalysisCore.modify(["Global", "Devices", hostname], 'IP Address', ip[0])
-                    LogIt(f"Notice: Extracted IP address {ip[0]} from config for {hostname}", 7)
     return
 
 

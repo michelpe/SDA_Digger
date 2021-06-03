@@ -174,8 +174,14 @@ def LispDBAnalysis(dnac, dnac_core):
     statfail = 0
     localstat = 0
     failedeid = []
+    cpnodes = []
     lispdb = dnac_core.get(["lisp", "database"])
-    cpnodes = dnac_core.get(["lisp", "site", "ip"]).keys()  # Assuming all CP nodes have IP
+    tcpnodes = dnac_core.get(["lisp", "site"])
+    for AF in tcpnodes.keys():
+        cpnodes.extend(dnac_core.get(["lisp", "site", AF]).keys()) # Assuming all CP nodes have IP
+    if len(cpnodes) == 0:
+        print("No CP nodes found , exiting")
+        return
     if lispdb is None:
         LogIt(
             f"Error: No LISP Database entries found to parse", 1)
@@ -591,7 +597,7 @@ def check_locals(svi, sifs, device):
     return succes, notfound, mismatch
 
 
-def check_dt():
+def check_dt(dnac,dnac_core):
     devices = build_edge_list()
     succes = mismatch = notfound = 0
     total_succes = total_mismatch = total_notfound = 0
@@ -612,7 +618,7 @@ def check_dt():
     return
 
 
-def check_MTU():
+def check_MTU(dnac,dnac_core):
     mtus = []
     badmtu = goodmtu = 0
     devices = build_fabric_list()

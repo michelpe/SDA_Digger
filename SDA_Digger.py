@@ -8,6 +8,7 @@ import AnalysisCore
 import ParseCommands
 import Analysis
 from getpass import getpass
+import ParseBundle
 
 edge_cmd_list = [["show lisp session", "show lisp instance * ethernet database", "sh lisp instance-id * ipv4 database",
                   "sh lisp instance-id * ipv6 database", "show device-tracking database"]
@@ -352,7 +353,7 @@ def main(argv):
     logdir = None
     debug = False
     try:
-        opts, args = getopt.getopt(argv, "hxd:u:p:f:d:l:", ["directory="])
+        opts, args = getopt.getopt(argv, "hxd:u:p:f:d:l:b:", ["directory="])
     except getopt.GetoptError:
         print('SDA_Digger.py -d <DNAC IP> -u <username> -p <password> -f <fabric> -l <logdirectory>')
         sys.exit(2)
@@ -372,6 +373,11 @@ def main(argv):
             fabric = arg
         elif opt in "-l":
             logdir = arg
+        elif opt in "-b":
+            inputdir = arg
+            dnac_core = AnalysisCore.Analysis_Core()
+            ParseBundle.ParseBundle(dnac_core,inputdir)
+            exit()
     if dnac is None:
         dnac = input("DNAC IP address :")
     if username is None:

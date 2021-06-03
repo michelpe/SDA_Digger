@@ -17,7 +17,6 @@ class DnacCon:
         self.DNAC = server
         self.username = user
         self.password = pword
-        self.get_token()
         self.topo = {}
         self.connect = None
         self.fabric = ""
@@ -26,18 +25,22 @@ class DnacCon:
         self.debug = False
         self.crunnerretry = 0
         time.localtime()
-        self.logdir = f"log{time.localtime().tm_mon}{time.localtime().tm_mday}_{time.localtime().tm_hour}" \
-                      f"{time.localtime().tm_min}"
-        if directory is not None:
-            self.logdir = os.path.join(directory,self.logdir)
+        if server != "non-interactive":
+            self.get_token()
+            self.logdir = f"log{time.localtime().tm_mon}{time.localtime().tm_mday}_{time.localtime().tm_hour}" \
+                          f"{time.localtime().tm_min}"
+            if directory is not None:
+                self.logdir = os.path.join(directory,self.logdir)
+            else:
+                self.logdir = os.path.join(os.getcwd(), self.logdir)
+            if os.path.exists(self.logdir):
+                # directory already exists. appending outputs
+                pass
+            else:
+                os.makedirs(self.logdir)
+            print(f"Storing outputs in directory {self.logdir}")
         else:
-            self.logdir = os.path.join(os.getcwd(), self.logdir)
-        if os.path.exists(self.logdir):
-            # directory already exists. appending outputs
-            pass
-        else:
-            os.makedirs(self.logdir)
-        print(f"Storing outputs in directory {self.logdir}")
+            self.fabric = "Bundled"
 
     def connect_dnac(self, http_action, http_url, http_headers):
         http_headers['X-auth-token'] = self.token

@@ -17,6 +17,7 @@ CLI Options:
 -p [password] 
 -f [fabric] 
 -l [logdirectory]
+-b [Directory with extraced MRE Bundle files]
 
 To run the tool a recent verion of Python is required (minimal version 3.7)
 
@@ -52,4 +53,8 @@ To run the tool a recent verion of Python is required (minimal version 3.7)
   The commands executed from the dig_command.txt file which needs to be present 
   in the directory the file is in. The $variable commands inside the dig_command.txt
   are replaced with the values (if known) to be executed
+- Using the -b option an non-ineractive analyis of an bundle file
+  fom the DNAC Network Reasoner Fabric Data Collecton tool. 
+  Bundle files need to be extraced in current release
+  Parsing and analysis is limited in current version
   

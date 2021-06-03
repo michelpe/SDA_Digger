@@ -165,8 +165,9 @@ def ParseWLCConfig(output, hostname,dnac_core):
     return
 
 
-def ParseConfig(output, hostname,dnac_core):
-    output = re.split(r"\n", output)
+def ParseConfig(output,hostname,dnac_core):
+    if type(output)!= list:
+        output = re.split(r"\n", output)
     splits = splititup(output, "^!")
     #print (splits[0])
     for splitted in splits:
@@ -257,9 +258,8 @@ def ParseBFD(output, key, hostname,dnac_core):
     return
 
 def ParseAAA(output, key, hostname,dnac_core):
-    return
     for line in output:
-        print (line)
+        pass
     return
 
 
@@ -278,9 +278,10 @@ def ParseSingleDev(output, hostname,dnac_core):
             elif re.match(r"cts", splitkey[1]):
                 ParseCTS(output, splitkey[1:],hostname,dnac_core)
             elif re.match(r"running", splitkey[1]):
-                ParseConfig(output, splitkey[1:], hostname,dnac_core)
+                ParseConfig(output, hostname,dnac_core)
             elif re.match(r"access-tunnel", splitkey[1]):
-                ParseAccessTunnel(output, splitkey[1:], hostname,dnac_core)
+                #ParseAccessTunnel(output, splitkey[1:], hostname,dnac_core)
+                pass
             elif re.match(r"device-tracking", splitkey[1]):
                 ParseDT(output, splitkey[1:], hostname,dnac_core)
             elif re.match(r"wireless", splitkey[1]):
@@ -301,10 +302,12 @@ def ParseSingleDev(output, hostname,dnac_core):
                     pass
 
 
-def ParseCommand(fabriccli):
+def ParseCommand(fabriccli,dnac_core):
     for key in fabriccli.keys():
         tdict = {}
         tdict = {"Name": key}
-        AnalysisCore.add(["Global", "Devices", key, tdict])
-        ParseSingleDev(fabriccli[key], key)
+        dnac_core.add(["Global", "Devices", key, tdict])
+        print (fabriccli[key])
+        ParseSingleDev(fabriccli[key], key,dnac_core)
+        exit()
     return

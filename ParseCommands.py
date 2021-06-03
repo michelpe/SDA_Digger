@@ -54,13 +54,13 @@ def CTSEnv(output, hostname,dnac_core):
     return
 
 
-def ParseLoop0(output, hostname):
+def ParseLoop0(output, hostname,dnac_core):
     for lines in output:
         if re.match(r"^ ip address", lines):
             ip = re.findall(r"\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}", lines)
             if len(ip) > 1:
-                if (AnalysisCore.get(["Global", "Devices", hostname, 'IP Address'])) is None:
-                    AnalysisCore.modify(["Global", "Devices", hostname], 'IP Address', ip[0])
+                if (dnac_core.get(["Global", "Devices", hostname, 'IP Address'])) is None:
+                    dnac_core.modify(["Global", "Devices", hostname], 'IP Address', ip[0])
     return
 
 def IPMRoute(output, hostname,dnac_core):
@@ -175,8 +175,8 @@ def ParseConfig(output,hostname,dnac_core):
         if len(splitted) > 1:
             if re.match(r"^router lisp", splitted[1]):
                 ParseLispConfig(splitted[1:], hostname,dnac_core)
-  #          elif re.match(r"^interface Loopback0", splitted[1]):
-  #              ParseLoop0(splitted[1:], hostname,dnac_core)
+            elif re.match(r"^interface Loopback0", splitted[1]):
+                ParseLoop0(splitted[1:], hostname,dnac_core)
             elif re.match(r"^interface Vlan[12]\d{3}", splitted[1]):
                 parse_svi(splitted[1:],hostname,dnac_core)
             #Going through part that was splitted to find one line configs like system mtu

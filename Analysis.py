@@ -465,20 +465,22 @@ def CheckLispSession(dnac, dnac_core):
         print(f"no devices found in fabric {dnac.fabric} exiting")
         exit()
     for cp in cpnodes:
-        # print (cpnodes[cp]["name"])
+        #print (cpnodes[cp]["name"])
         cp_nodes.append(cpnodes[cp]["name"])
     for border in borders:
-        # print(borders[border]["name"])
+        #print(borders[border]["name"])
         devices.append(borders[border]["name"])
     for edge in edgenodes:
-        # print(edgenodes[edge]["name"])
+        #print(edgenodes[edge]["name"])
         devices.append(edgenodes[edge]["name"])
     esession = fsession = fails = 0
     for device in set(devices):
         sesdbraw = dnac_core.get(['lisp', 'session', device])
         if sesdbraw is not None:
             sesdb = dnac_core.get(['lisp', 'session', device]).keys()
+            #print("keys",sesdb)
             for session in cpnodes:
+                #print ("cpnodes",session,cpnodes)
                 cpname = dnac_core.get(['devices', dnac.fabric, 'MAPSERVER', session])["name"]
                 if session not in sesdb:
                     if cpname == device:
@@ -487,7 +489,7 @@ def CheckLispSession(dnac, dnac_core):
                         fsession = fsession + 1
                         print(f"Session Analysis: CP session to {cpname} not present on {device}")
                 else:
-                    print(f"Session Analysis: CP session to {cpname} present on {device}")
+                    #print(f"Session Analysis: CP session to {cpname} present on {device}")
                     esession = esession + 1
                     users = dnac_core.get(['lisp', 'session', device]).get(session).get('Users')
                     if dnac_core.get(['lisp', 'session', device]).get(session).get('status') == "Down":

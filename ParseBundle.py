@@ -65,11 +65,11 @@ def build_dnac_data(dnac,dnac_core):
     cp = []
     edges = []
     devis ={}
+    #print(devs)
     for devices in devs.keys():
         devis[devices]={}
         devis[devices]["uuid"]=int(random.randint(1000000000,9000000000))
         devis[devices]["ip"]=dnac_core.get(["Global","Devices",devices]).get("IP Address")
-        #print(devis)
         if devs[devices]["Border"] is True:
             borders.append(devices)
         if devs[devices]["CP"] is True:
@@ -108,7 +108,6 @@ def ParseBundle(dnac_core,dir):
     Analysis.CheckAuth(dnac,dnac_core)
     Analysis.CheckRLOCreach(dnac,dnac_core)
     Analysis.CheckCTS(dnac,dnac_core)
-    Analysis.CheckAuth(dnac,dnac_core)
     #dnac_core.printit()
     return
 

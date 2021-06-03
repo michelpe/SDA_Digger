@@ -45,9 +45,11 @@ def parsetext(dir, file,dnac_core):
      if re.match(r"^\S*[Ss]ho\s*", line):
          if len(cmd) > 0:
             parsed.append(cmd)
-         cmd = line
+         cmd = line.split('#')[-1]
      else:
          cmd= "".join([cmd,line])
+    if len(cmd) > 0:
+        parsed.append(cmd)
     for command in parsed:
         if re.match(r".*\n.*",command):
           ParseCommands.ParseSingleDev(command, hostname, dnac_core)
@@ -99,7 +101,7 @@ def ParseBundle(dnac_core,dir):
     Analysis.Config2Fabric(dnac, dnac_core)
     Analysis.CP2Fabric(dnac, dnac_core)
     Analysis.CheckLispSession(dnac,dnac_core)
-    #Analysis.LispDBAnalysis(dnac,dnac_core)
+    Analysis.LispDBAnalysis(dnac,dnac_core)
     Analysis.CheckEdgeMC(dnac,dnac_core)
     #Analysis.check_MTU(dnac,dnac_core)
     #Analysis.check_dt(dnac,dnac_core)

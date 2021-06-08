@@ -549,7 +549,7 @@ def CheckCTS(dnac, dnac_core):
     return
 
 
-def checksvi():
+def checksvi(dnac,dnac_core):
     devices = dnac_core.get(["lisp", "roles"])
     good_svi = bad_svi = 0
     if devices is None:
@@ -993,6 +993,10 @@ def Device2Mac(dnac, dnac_core, debug_core, inp):
                 if ip is not None:
                     entries[str(i)]["ipv4"]=ip
                     entries[str(i)]["ipv4tot"] = ip + '\32'
+                    if re.match(r"Global Routing.*",vrf):
+                        vrf = ""
+                    else:
+                        vrf = f"vrf {vrf}"
                     entries[str(i)]["vrf"] = vrf
                     l3info = dnac_core.get(["lisp", "config", inp, "vlan_vrf",vrf])
                     if l3info is not None:

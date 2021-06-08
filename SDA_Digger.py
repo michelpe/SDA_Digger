@@ -186,7 +186,13 @@ def Build_Lisp_Fabric(dnac, dnac_core, fabric):
     elif len(dnac.topo['fabrics']) > 1:
         while True:
             if fabric is None:
-                fabric = input(f"Which fabric should be used: {dnac.topo['fabrics'].keys()} ")
+                print("Found Fabrics:")
+                for fabrics in dnac.topo['fabrics'].keys():
+                    print (fabrics)
+            fabric = input(f"Which fabric should be used: ")
+            if fabric  not in dnac.topo['fabrics'].keys():
+                print(f"Fabric: {fabric} not found")
+                fabric = None
             if fabric in dnac.topo['fabrics'].keys():
                 dnac.fabric = fabric
                 check_fabric(fabric, dnac, dnac_core)

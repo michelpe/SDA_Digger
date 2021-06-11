@@ -29,154 +29,6 @@ def LogIt(message, level):
     else:
         print(message)
 
-def build_edge_list():
-    devices = dnac_core.get(["lisp", "roles"])
-    edge_list = []
-    if devices is None:
-        return edge_list
-    for device in devices.keys():
-        if devices[device]["Border"] is False and devices[device]["CP"] is False and devices[device]["XTR"] is True:
-            edge_list.append(device)
-    return edge_list
-
-
-def build_fabric_list():
-    devices = dnac_core.get(["lisp", "roles"])
-    edge_list = []
-    if devices is None:
-        return edge_list
-    for device in devices.keys():
-        if devices[device]["Border"] == True or devices[device]["XTR"] == True:
-            edge_list.append(device)
-    return edge_list
-
-
-def db2ip(device):
-    dbentries = dnac_core.get(["lisp", "database", device])
-    if type(dbentries) is dict:
-        for instance in dbentries:
-            for eid in dbentries[instance]:
-                if "RLOC" in dbentries[instance][eid].keys():
-                    #  print (dbentries[instance][eid]["RLOC"])
-                    return dbentries[instance][eid]["RLOC"]
-
-    return None
-
-
-def findip():
-    devices = dnac_core.get(["Global", "Devices"])
-    for device in devices:
-        if "IP Address" not in devices[device].keys():
-            tdict = devices[device]
-            IP = db2ip(device)
-            if IP:
-                AnalysisCore.modify(["Global", "Devices", device], 'IP Address', IP)
-    return
-
-
-def IP2name(device):
-    devices = dnac_core.get(["Global", "Devices", device])
-    if devices is not None:
-        return devices['IP Address']
-    return None
-
-
-def FindName(dnac_core,ipaddress):
-    devices = dnac_core.get(["Global", "Devices"])
-    for device in devices:
-        if device.get("IP Address") == ipaddress:
-            return device["Name"]
-    return None
-
-
-''' Gets wireless info from edge devices to check '''
-
-
-def BuildWireless():
-    wireless = dnac_core.get(["lisp", "wireless"])
-    if wireless is None:
-        return
-    nodes = wireless.keys()
-    for node in nodes:
-        nodewireless = wireless[node]
-        linstances = nodewireless.keys()
-        for linstance in linstances:
-            nodeeid = nodewireless[linstance]
-            weids = nodeeid.keys()
-            for weid in weids:
-                ueid = nodeeid[weid]
-                if ueid["Type"] == "AP":
-                    LogIt(f"Notice: AP {weid} signalled by WLC present on {node}", 7)
-                    AnalysisCore.add(("fabric", "ap", weid, {"Node": node, "Instance": linstance}))
-    return
-
-
-''' Gets site information to determine devices running as MSMR'''
-
-
-def CheckCP():
-    CPnodes = dnac_core.get(["lisp", "site"])
-    if CPnodes is None:
-        LogIt(
-            f"Error: No LISP Control Plane Information found ,parsing results may be inconclusive", 1)
-        return
-    statecps = 0
-    cpfabric = {}
-    allid = set()
-    for ar in CPnodes.keys():
-        areid = CPnodes[ar]
-        for nodes in areid.keys():
-            node = areid[nodes]
-            statecps = statecps + 1
-            for lispinst in node.keys():
-                instanceinfo = node[lispinst]
-                for eidsp in instanceinfo.keys():
-                    who = instanceinfo[eidsp]["Last Register"].split(':')[0]
-                    state = instanceinfo[eidsp]["Status"]
-                    if re.match(r"^ye.*", state):
-                        # LogIt(f"{ar} {nodes} {lispinst} {eidsp} {who} {state}",10)
-                        rl = dnac_core.get(["fabric", ar, lispinst, eidsp])
-                        if rl is None:
-                            AnalysisCore.add(("fabric", ar, lispinst, eidsp, {"Register": [who]}))
-                        else:
-                            if who in rl["Register"]:
-                                pass
-                            else:
-                                rlr = rl["Register"]
-                                new = [*rlr, who]
-                                LogIt(
-                                    f"Error: {lispinst}:{eidsp} mismatch between CP nodes, showing RLOC as {rlr} and [{who}]",
-                                    1)
-                                AnalysisCore.add(("fabric", ar, lispinst, eidsp, {"Register": new}))
-                    own = dnac_core.get(["Global", "IP", who])
-                    if who == "--":
-                        pass
-                    elif own is None:
-                        mac = eidsp[:-3]
-                        if dnac_core.get(["fabric", "ap", eidsp[:-3]]) is None:
-                            LogIt(
-                                f"Error: Registrar {who} not part of captured info or invalid,unable to check {lispinst}:{eidsp} ",
-                                3)
-                    else:
-                        reger = dnac_core.get(["lisp", "database", own["Hostname"], lispinst, eidsp])
-                        if reger is None:
-                            regrole = dnac_core.get(["lisp", "roles", own["Hostname"]])
-                            if regrole is None:
-                                LogIt(
-                                    f"Error: {lispinst}:{eidsp} not found in LISP database on {who}, not a parsed edge device ",
-                                    3)
-                            else:
-                                if regrole["Border"] is True:
-                                    LogIt(
-                                        f"Debug: {lispinst}:{eidsp} not found in LISP database on {who} with role Border, possible Layer 2 Border config present ",
-                                        10)
-                                else:
-                                    LogIt(f"Error: {lispinst}:{eidsp} not found in LISP database on {who}", 3)
-                        else:
-                            LogIt(f"Debug: {lispinst}:{eidsp} match found in LISP database on {who}", 90)
-                            pass
-
-    return
 
 
 ''' Gets Database information to determine Edge Devices'''
@@ -615,7 +467,9 @@ def check_locals(svi, sifs, device):
 
 
 def check_dt(dnac,dnac_core):
-    devices = build_edge_list()
+    devices = dnac_core.get(["Global", "Device-tracking"]).keys()
+    if devices is None:
+        return
     succes = mismatch = notfound = 0
     total_succes = total_mismatch = total_notfound = 0
     for device in devices:
@@ -638,7 +492,9 @@ def check_dt(dnac,dnac_core):
 def check_MTU(dnac,dnac_core):
     mtus = []
     badmtu = goodmtu = 0
-    devices = build_fabric_list()
+    devices = dnac_core.get(["Global", "MTU"]).keys()
+    if devices is None:
+        return
     for device in devices:
         MTU = dnac_core.get(["Global", "MTU", device])
         if MTU is None:

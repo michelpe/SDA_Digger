@@ -119,12 +119,12 @@ def ParseBundle(dnac_core,dir):
     Analysis.CheckLispSession(dnac,dnac_core)
     Analysis.LispDBAnalysis(dnac,dnac_core)
     Analysis.CheckEdgeMC(dnac,dnac_core)
-    #Analysis.check_MTU(dnac,dnac_core)
-    #Analysis.check_dt(dnac,dnac_core)
+    Analysis.check_MTU(dnac,dnac_core)
+    Analysis.check_dt(dnac,dnac_core)
     Analysis.CheckAuth(dnac,dnac_core)
     Analysis.CheckRLOCreach(dnac,dnac_core)
     Analysis.CheckCTS(dnac,dnac_core)
-    #Analysis.checksvi(dnac,dnac_core)
+    Analysis.checksvi(dnac,dnac_core)
     #dnac_core.printit()
     return
 

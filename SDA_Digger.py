@@ -75,18 +75,18 @@ def check_dev(dnac, dnac_core, fabric, dev):
             resp = dnac.geturl(f"/dna/intent/api/v1/network-device?managementIpAddress={dev['managementIpAddress']}")
             dnac.devices[dev['hostname']] = resp.get("response")
             # print(dev["hostname"])
-            #print (resp['response'][0]['reachabilityStatus'])
+            # print (resp['response'][0]['reachabilityStatus'])
             if len(roles) > 0:
                 uuid = resp['response'][0]['id']
                 for role in roles:
                     dnac_core.add(["devices", fabric, role, dev['managementIpAddress'],
                                    {"name": dev["hostname"], "IOS": dev['softwareVersion'], "id": uuid,
-                                    "roles": roles,"reachability": dev['reachabilityStatus']}])
+                                    "roles": roles, "reachability": dev['reachabilityStatus']}])
                     dnac_core.add(["Global", "Devices", dev["hostname"], {"IP Address": dev["managementIpAddress"]}])
                     dnac.topo['devices'][uuid] = dev['hostname']
-                    dnac.topo['hostnames'][dev['hostname']]=uuid
+                    dnac.topo['hostnames'][dev['hostname']] = uuid
                     dnac.topo['ip2uuid'][dev["managementIpAddress"]] = uuid
-                    dnac.topo['reach'][uuid]=dev['reachabilityStatus']
+                    dnac.topo['reach'][uuid] = dev['reachabilityStatus']
                     if dev['reachabilityStatus'] == "Unreachable":
                         print(f"{dev['hostname']} is in state {dev['reachabilityStatus']}")
     else:
@@ -99,7 +99,7 @@ def build_hierarch(dnac, dnac_core):
     resp = dnac.geturl("/dna/intent/api/v1/site")
     sites = resp["response"]
     site_view = []
-    dnac.topo = {'sites': {}, 'fabrics': {}, 'devices': {}, 'ip2uuid': {},'reach': {},'hostnames':{}}
+    dnac.topo = {'sites': {}, 'fabrics': {}, 'devices': {}, 'ip2uuid': {}, 'reach': {}, 'hostnames': {}}
     for site in sites:
         if 'parentId' in site.keys():
             site_view.append(site['siteNameHierarchy'])
@@ -118,7 +118,6 @@ def build_hierarch(dnac, dnac_core):
 
 def find_wlc(dnac, dnac_core, resp):
     site = resp.get("site")
-    wlc = None
     if site is None:
         return
     response = site.get("response")
@@ -133,7 +132,7 @@ def find_wlc(dnac, dnac_core, resp):
                     primarywlc = attributes.get("primaryWlc")
                     if primarywlc is not None:
                         dnac.wlc["uuid"] = primarywlc
-                        dnac.topo['reach'][primarywlc] ="Reachable"
+                        dnac.topo['reach'][primarywlc] = "Reachable"
 
     if dnac.wlc.get("uuid") is not None:
         resp = dnac.geturl(f"/dna/intent/api/v1/network-device/{dnac.wlc.get('uuid')}")
@@ -193,6 +192,7 @@ def check_fabric(fabric, dnac, dnac_core):
 
 
 def Build_Lisp_Fabric(dnac, dnac_core, fabric):
+    #print (fabric)
     if len(dnac.topo['fabrics']) == 1:
         print("Only one fabric found, proceeding")
         for fabric in dnac.topo['fabrics']:
@@ -203,9 +203,9 @@ def Build_Lisp_Fabric(dnac, dnac_core, fabric):
             if fabric is None:
                 print("Found Fabrics:")
                 for fabrics in dnac.topo['fabrics'].keys():
-                    print (fabrics)
-            fabric = input(f"Which fabric should be used: ")
-            if fabric  not in dnac.topo['fabrics'].keys():
+                    print(fabrics)
+                fabric = input(f"Which fabric should be used: ")
+            if fabric not in dnac.topo['fabrics'].keys():
                 print(f"Fabric: {fabric} not found")
                 fabric = None
             if fabric in dnac.topo['fabrics'].keys():
@@ -216,8 +216,6 @@ def Build_Lisp_Fabric(dnac, dnac_core, fabric):
         print(f"No fabrics found, exiting")
         exit()
     # print(dnac_core.printit())
-
-
 
 
 def SessionAnalysis(dnac, dnac_core):
@@ -253,7 +251,6 @@ def CTSAnalysis(dnac, dnac_core):
     edges = []
     for edge_dev in edge:
         edges.append(edge[edge_dev]["id"])
-        eid = edge[edge_dev]["id"]
     mergedlist = []
     mergedlist.extend(auth_cmd_list)
     mergedlist.extend(cts_cmd_list)
@@ -267,12 +264,10 @@ def CTSAnalysis(dnac, dnac_core):
 
 
 def DatabaseAnalysis(dnac, dnac_core):
-    data_core = AnalysisCore.Analysis_Core()
+    # data_core = AnalysisCore.Analysis_Core()
     edge = dnac_core.get(["devices", dnac.fabric, "EDGENODE"])
     print(f"Importing basic edge information for fabric {dnac.fabric}")
     edges = []
-    i = 0
-    t = 0
     for edge_dev in edge:
         edges.append(edge[edge_dev]["id"])
     if len(edges) > 0:
@@ -299,7 +294,7 @@ def MapCacheAnalysis(dnac, dnac_core):
 def ReachabilityAnalysis(dnac, dnac_core):
     devices_id_list = BuildIdlist(dnac, dnac_core, ["EDGENODE", "BORDERNODE"])
     if len(devices_id_list) > 0:
-        ret = dnac.command_run(["show ip route","show clns neigh detail", "show bfd neigh detail"], devices_id_list)
+        ret = dnac.command_run(["show ip route", "show clns neigh detail", "show bfd neigh detail"], devices_id_list)
         for responses in ret:
             ParseCommands.ParseSingleDev(responses["output"], responses["host"], dnac_core)
     Analysis.CheckRLOCreach(dnac, dnac_core)
@@ -363,7 +358,7 @@ def Menu(dnac, dnac_core):
         elif choice == "q":
             exit()
         elif choice == "6":
-            Analysis.Digger(dnac,dnac_core)
+            Analysis.Digger(dnac, dnac_core)
 
 
 def main(argv):
@@ -385,7 +380,7 @@ def main(argv):
         elif opt == "-d":
             dnac = arg
         elif opt == "-x":
-            debug=True
+            debug = True
         elif opt in "-u":
             username = arg
         elif opt in "-p":
@@ -397,7 +392,7 @@ def main(argv):
         elif opt in "-b":
             inputdir = arg
             dnac_core = AnalysisCore.Analysis_Core()
-            ParseBundle.ParseBundle(dnac_core,inputdir)
+            ParseBundle.ParseBundle(dnac_core, inputdir)
             exit()
     if dnac is None:
         dnac = input("DNAC IP address :")
@@ -405,9 +400,9 @@ def main(argv):
         username = input("username :")
     if password is None:
         password = getpass()
-    dnac = DNAC_Connector.DnacCon(dnac, username, password,logdir)
-    if debug == True:
-        dnac.debug=True
+    dnac = DNAC_Connector.DnacCon(dnac, username, password, logdir)
+    if debug is True:
+        dnac.debug = True
     while True:
         dnac_core = AnalysisCore.Analysis_Core()
         build_hierarch(dnac, dnac_core)

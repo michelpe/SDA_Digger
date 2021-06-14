@@ -16,6 +16,7 @@ or implied.
 
 import json
 
+
 class Analysis_Core:
     def __init__(self):
         self.Parsed = {}
@@ -88,13 +89,12 @@ class Analysis_Core:
         self.add(passalong)
         return
 
-        '''Dump the Parsed table for viewing'''
-
+    # Function to print out data structure as formatted json
     def printit(self):
-
         print("\n" + "*" * 80)
         print("          Raw Data:")
         print(json.dumps(self.Parsed, indent=4))
+        return
 
     def get(self, clist):
         tdt = self.Parsed
@@ -103,5 +103,4 @@ class Analysis_Core:
                 tdt = tdt[clis]
             else:
                 return None
-
         return tdt

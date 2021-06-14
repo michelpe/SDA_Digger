@@ -14,85 +14,60 @@ IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
 or implied.
 """
 
-import sys
-import getopt
+
 import os
 import re
 import DNAC_Connector
-import json
-import AnalysisCore
 import ParseCommands
 import Analysis
-import SDA_Digger
 import random
 
 
-def parsetext1(dir, file):
-    content = []
-    pline = ""
-    scount = 0
-    cli = {}
-    fd = open(dir + "/" + file, "r")
-    hostname = re.split("\.", file)[0]
-    fcont = fd.readlines()
-    for line in fcont:
-        line.strip("\n")
-        if re.match(r"^\S*[Ss]how\s*", line):
-            if len(content) >= 0:
-                cli.update({pline: content})
-                pline = line
-            content = []
-        else:
-            content.append(line)
-    if len(content) >= 0:
-        cli.update({pline: content})
-        print(pline)
-    return {hostname: cli}
-
-def parsetext(dir, file,dnac_core):
-    fd = open(dir + "/" + file, "r")
+# Extract all show commands from .txt files and run parsing script on each command
+def parsetext(indir, file, dnac_core):
+    fd = open(indir + "/" + file, "r")
     hostname = file.split(".")[0]
     parsed = []
     cmd = ""
     tdict = {"Name": hostname}
     dnac_core.add(["Global", "Devices", hostname, tdict])
-    input = fd.readlines()
-    for count,line in enumerate(input):
-     if re.match(r"^\S*[Ss]ho\s*", line):
-         if len(cmd) > 0:
-            parsed.append(cmd)
-         cmd = line.split('#')[-1]
-     else:
-         cmd= "".join([cmd,line])
+    readin = fd.readlines()
+    for count, line in enumerate(readin):
+        if re.match(r"^\S*[Ss]ho\s*", line):
+            if len(cmd) > 0:
+                parsed.append(cmd)
+            cmd = line.split('#')[-1]
+        else:
+            cmd = "".join([cmd, line])
     if len(cmd) > 0:
         parsed.append(cmd)
     for command in parsed:
-        if re.match(r".*\n.*",command):
-          ParseCommands.ParseSingleDev(command, hostname, dnac_core)
+        if re.match(r".*\n.*", command):
+            ParseCommands.ParseSingleDev(command, hostname, dnac_core)
     return
 
-#Using Bundle no data been pulled from DNAC. Creating Dummy data to run analysis scripts
-def build_dnac_data(dnac,dnac_core):
-    devs = dnac_core.get(["lisp","roles"])
+
+# When Using Bundle no data has been pulled from DNAC. Creating Dummy data to run analysis scripts
+def build_dnac_data(dnac, dnac_core):
+    devs = dnac_core.get(["lisp", "roles"])
     if devs is None:
         print("Device configuration not parsed to determine device roles, exiting")
         exit()
     borders = []
     cp = []
     edges = []
-    devis ={}
-    #print(devs)
+    devis = {}
     for devices in devs.keys():
-        devis[devices]={}
-        devis[devices]["uuid"]=int(random.randint(1000000000,9000000000))
-        devis[devices]["ip"]=dnac_core.get(["Global","Devices",devices]).get("IP Address")
+        devis[devices] = {}
+        devis[devices]["uuid"] = int(random.randint(1000000000, 9000000000))
+        devis[devices]["ip"] = dnac_core.get(["Global", "Devices", devices]).get("IP Address")
         if devs[devices]["Border"] is True:
             borders.append(devices)
         if devs[devices]["CP"] is True:
             cp.append(devices)
         if devs[devices]["XTR"] is True:
             edges.append(devices)
-    #dnac_core.printit()
+    # dnac_core.printit()
     for cpnode in cp:
         dnac_core.add(["devices", dnac.fabric, "MAPSERVER", devis[cpnode]['ip'],
                        {"name": cpnode, "id": devis[cpnode]["uuid"]}])
@@ -104,28 +79,26 @@ def build_dnac_data(dnac,dnac_core):
                        {"name": edge, "id": devis[edge]["uuid"]}])
     return
 
-def ParseBundle(dnac_core,dir):
-    dnac = DNAC_Connector.DnacCon("non-interactive", "", "","")
-    files = os.listdir(dir)
+
+# Read all files in offline analysis bundle and execute various analysis scripts on offline bundle
+def ParseBundle(dnac_core, indir):
+    dnac = DNAC_Connector.DnacCon("non-interactive", "", "", "")
+    files = os.listdir(indir)
     if files is None:
         return
-    #fabriccli = {}
     for file in files:
         if re.match(r".*\.txt$", file):
-            parsetext(dir, file,dnac_core)
-    build_dnac_data(dnac,dnac_core)
+            parsetext(indir, file, dnac_core)
+    build_dnac_data(dnac, dnac_core)
     Analysis.Config2Fabric(dnac, dnac_core)
     Analysis.CP2Fabric(dnac, dnac_core)
-    Analysis.CheckLispSession(dnac,dnac_core)
-    Analysis.LispDBAnalysis(dnac,dnac_core)
-    Analysis.CheckEdgeMC(dnac,dnac_core)
-    Analysis.check_MTU(dnac,dnac_core)
-    Analysis.check_dt(dnac,dnac_core)
-    Analysis.CheckAuth(dnac,dnac_core)
-    Analysis.CheckRLOCreach(dnac,dnac_core)
-    Analysis.CheckCTS(dnac,dnac_core)
-    Analysis.checksvi(dnac,dnac_core)
-    #dnac_core.printit()
+    Analysis.CheckLispSession(dnac, dnac_core)
+    Analysis.LispDBAnalysis(dnac, dnac_core)
+    Analysis.CheckEdgeMC(dnac, dnac_core)
+    Analysis.check_MTU(dnac, dnac_core)
+    Analysis.check_dt(dnac, dnac_core)
+    Analysis.CheckAuth(dnac, dnac_core)
+    Analysis.CheckRLOCreach(dnac, dnac_core)
+    Analysis.CheckCTS(dnac, dnac_core)
+    Analysis.checksvi(dnac, dnac_core)
     return
-
-

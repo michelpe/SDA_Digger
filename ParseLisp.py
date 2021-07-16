@@ -267,17 +267,35 @@ def lisp(output, key, hostname, dnac_core):
 
 def ParseLispConfig(output, hostname, dnac_core):
     splits = splititup(output, "^ !")
-    role = {"Border": False, "CP": False, "XTR": False}
-    instance = ""
+    role = {"Border": False, "CP": False, "XTR": False, "TCP":False}
+    instance = "Global"
+    mresolver = dict()
     bcast = ""
     eidtype = ""
     eidvalue = ""
+    siteinfo = {}
     for splitted in splits:
         if len(splitted) > 1:
             for splited in splitted:
                 splitup = splited.split()
                 if re.match(r"^ site", splited):
                     role["CP"] = True
+                elif re.match(r"^  eid-record instance-id*",splited) and role.get("CP"):
+                    site_instance = splitup[2]
+                    site_eid = splitup[3]
+                    if site_instance in siteinfo.keys():
+                        siteinfo[site_instance].append(site_eid)
+                    else:
+                        siteinfo[site_instance]=[site_eid]
+                elif re.match(r".*itr map-resolver.*", splited):
+                    mapresolver=splitup[2]
+                    if instance in mresolver.keys():
+                        if mapresolver not in mresolver[instance]:
+                             mresolver[instance].append(mapresolver)
+                    else:
+                        mresolver[instance]=[mapresolver]
+                elif re.match(r".*exit-site.*", splited):
+                    dnac_core.add(["lisp","siteconfig",hostname,siteinfo])
                 elif (re.match(r".*proxy-etr.*", splited)) or (re.match(r".*route-import database", splited)):
                     role["Border"] = True
                 elif re.match(r".*database-mapping", splited):
@@ -299,5 +317,6 @@ def ParseLispConfig(output, hostname, dnac_core):
                     bcast = ""
                     eidtype = ""
                     eidvalue = ""
+    dnac_core.add(["lisp","config-map-resolver",hostname,mresolver])
     dnac_core.add(["lisp", "roles", hostname, role])
     return

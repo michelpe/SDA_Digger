@@ -44,8 +44,7 @@ def LispDBAnalysis(dnac, dnac_core):
     cpnodes = []
     lispdb = dnac_core.get(["lisp", "database"])
     tcpnodes = dnac_core.get(["lisp", "site"])
-    for AF in tcpnodes.keys():
-        cpnodes.extend(dnac_core.get(["lisp", "site", AF]).keys())  # Assuming all CP nodes have IP
+
     if len(cpnodes) == 0:
         print("No CP nodes found , exiting")
         return
@@ -53,6 +52,8 @@ def LispDBAnalysis(dnac, dnac_core):
         LogIt(
             f"Error: No LISP Database entries found to parse", 1)
         return
+    for AF in tcpnodes.keys():
+        cpnodes.extend(dnac_core.get(["lisp", "site", AF]).keys())  # Assuming all CP nodes have IP
     # print (print(json.dumps(lispdb, indent=4)))
     for edgename in lispdb.keys():
         statdevs = statdevs + 1
@@ -175,6 +176,8 @@ def CheckEdgeMC(dnac, dnac_core):
     if lispmc is None:
         LogIt(
             f"Error: No LISP Map Cache entries found to parse", 1)
+        return
+    if  dnac_core.get(["lisp", "site"]) is None:
         return
     for edgename in lispmc.keys():
         statdevs = statdevs + 1
@@ -429,6 +432,8 @@ def checksvi(dnac, dnac_core):
             for svi in svi_info.keys():
                 svilist.append(json.dumps(svi_info))
             edgelist.append(device)
+    if len(svilist) == 0:
+        return
     best_svi = collections.Counter(svilist).most_common(1)[0][0]
     for device in edgelist:
         svi_info = dnac_core.get(["lisp", "svi_interface", device])
@@ -558,7 +563,7 @@ def DatabaseTooFabric(dnac, dnac_core):
     stateids = 0
     statfail = 0
     lispdb = dnac_core.get(["lisp", "database"])
-    print(lispdb)
+    #print(lispdb)
     if lispdb is None:
         LogIt(
             f"Error: No LISP Database entries found to parse", 1)
@@ -579,7 +584,7 @@ def DatabaseTooFabric(dnac, dnac_core):
                     eidsource = eidinfo["eSource"]
                     eidtype = eidinfo["eSource"]
                     rloc = eidinfo["RLOC"][0]
-                    print(f"{rloc.keys()} {eidtype} {eidsource} {edgeeid}")
+                    #print(f"{rloc.keys()} {eidtype} {eidsource} {edgeeid}")
                     eidtest = dnac_core.get(["fabric", edgeinstance, edgeeid])
                     local_macs = dnac_core.get(["lisp", "svi_interface", edgename])
                     if local_macs is None:
@@ -677,12 +682,16 @@ def CP2Fabric(dnac, dnac_core):
 def Config2Fabric(dnac, dnac_core):
     devices = dnac_core.get(["lisp", "config"])
     instances = {}
+    if devices is None:
+        print(f"Warning: No lisp Config found on devices")
+        return
     for device in devices.keys():
         for instance in devices[device]["instances"].keys():
             if instance not in instances:
                 instances[instance] = devices[device]["instances"][instance]
     dnac_core.add(
         ["fabric", "configured instances", instances])
+    devices = dnac_core.get(["lisp","config-map-resolver"])
     return
 
 

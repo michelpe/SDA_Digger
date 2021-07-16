@@ -920,3 +920,31 @@ def Digger(dnac, dnac_core):
             for devs in dnac_core.get(["Global", "Devices"]):
                 print(devs)
     return
+
+
+def DuplicateEid(dnac,dnac_core):
+    db=dnac_core.get(["lisp", "database"])
+    teid={}
+    unique=0
+    duplicate=0
+    for device in db.keys():
+        local_macs = dnac_core.get(["lisp", "svi_interface", device])
+        local_addr = []
+        if local_macs is not None:
+            for locals in local_macs:
+                for vals in local_macs[locals].keys():
+                    local_addr.append(local_macs[locals][vals])
+        else:
+            local_addr = []
+        for instance in db[device].keys():
+            for eid in db[device][instance].keys():
+                if "dynamic-eid" in db[device][instance][eid]["Source"] and eid.split("/")[0] not in local_addr:
+                   merged=f"{instance}:{eid}"
+                   if merged in teid.keys():
+                      print(f"Duplicate Addresses Analysis:Duplicate EID found {merged} found on device {device} also seen on {teid[merged]}")
+                      duplicate=duplicate+1
+                   else:
+                      teid[merged]=device
+                      unique=unique+1
+    print(f"Duplicate Addresses Analysis:Checked {unique+duplicate} addresses in LISP databases, found {duplicate} duplicate addresses ")
+    return

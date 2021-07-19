@@ -369,15 +369,19 @@ def main(argv):
     logdir = None
     debug = False
     print(f"Starting SDA Digger tool")
-    print(f"Feedback/comments/bug reports : Sda_digger@protonmail.com or https://github.com/michelpe/SDA_Digger\n\n")
+
     try:
         opts, args = getopt.getopt(argv, "hxd:u:p:f:d:l:b:", ["directory="])
     except getopt.GetoptError:
         print('SDA_Digger.py -d <DNAC IP> -u <username> -p <password> -f <fabric> -l <logdirectory> -b <bundle directory>')
+        print(
+            f"Feedback/comments/bug reports : Sda_digger@protonmail.com or https://github.com/michelpe/SDA_Digger\n\n")
         sys.exit(2)
     for opt, arg in opts:
         if opt == '-h':
             print('SDA_Digger.py -d <DNAC IP> -u <username> -p <password> -f <fabric> -l <logdirectory> -b <bundle directory>')
+            print(
+                f"Feedback/comments/bug reports : Sda_digger@protonmail.com or https://github.com/michelpe/SDA_Digger\n\n")
             sys.exit()
         elif opt == "-d":
             dnac = arg

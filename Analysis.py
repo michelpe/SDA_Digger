@@ -45,7 +45,7 @@ def LispDBAnalysis(dnac, dnac_core):
     lispdb = dnac_core.get(["lisp", "database"])
     tcpnodes = dnac_core.get(["lisp", "site"])
 
-    if len(cpnodes) == 0:
+    if len(tcpnodes) == 0:
         print("No CP nodes found , exiting")
         return
     if lispdb is None:

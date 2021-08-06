@@ -218,6 +218,14 @@ def Build_Lisp_Fabric(dnac, dnac_core, fabric):
     # print(dnac_core.printit())
 
 
+
+
+def Check_L3IF(dnac,dnac_core):
+    ids=BuildIdlist(dnac, dnac_core, ["EDGENODE"])
+    for id in ids:
+        Analysis.Cat9_L3_Check(dnac,dnac_core,id)
+    return
+
 def SessionAnalysis(dnac, dnac_core):
     edge = dnac_core.get(["devices", dnac.fabric, "EDGENODE"])
     print(f"Importing basic edge information for fabric {dnac.fabric}")
@@ -371,12 +379,13 @@ def main(argv):
     print(f"Starting SDA Digger tool")
 
     try:
-        opts, args = getopt.getopt(argv, "hxd:u:p:f:d:l:b:", ["directory="])
+        opts, args = getopt.getopt(argv, "hxd:u:p:f:d:l:b:e:", ["directory="])
     except getopt.GetoptError:
         print('SDA_Digger.py -d <DNAC IP> -u <username> -p <password> -f <fabric> -l <logdirectory> -b <bundle directory>')
         print(
             f"Feedback/comments/bug reports : Sda_digger@protonmail.com or https://github.com/michelpe/SDA_Digger\n\n")
         sys.exit(2)
+    esc_option = None
     for opt, arg in opts:
         if opt == '-h':
             print('SDA_Digger.py -d <DNAC IP> -u <username> -p <password> -f <fabric> -l <logdirectory> -b <bundle directory>')
@@ -395,6 +404,8 @@ def main(argv):
             fabric = arg
         elif opt in "-l":
             logdir = arg
+        elif opt in "-e":
+             esc_option = arg
         elif opt in "-b":
             inputdir = arg
             dnac_core = AnalysisCore.Analysis_Core()
@@ -413,6 +424,10 @@ def main(argv):
         dnac_core = AnalysisCore.Analysis_Core()
         build_hierarch(dnac, dnac_core)
         Build_Lisp_Fabric(dnac, dnac_core, fabric)
+        if esc_option is not None:
+            if esc_option == "l3eif":
+                print("Performing L3 LEAD index analysis")
+                Check_L3IF(dnac, dnac_core)
         Menu(dnac, dnac_core)
     return
 

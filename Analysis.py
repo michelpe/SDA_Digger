@@ -31,6 +31,39 @@ def LogIt(message, level):
         print(message)
 
 
+def Cat9_L3_Check(dnac,dnac_core,device_uuid):
+    #running commands for both switch active and active first to determine stack or chassis
+    ret = dnac.command_run(["sh platform software fed switch active ifm mappings l3if-le","sh pl so fed active ifm mappings l3if-le"], [device_uuid])
+    for response in ret:
+        if re.match(r".*sh platform software fed switch active ifm mappings l3if-le.*",response["output"]):
+            platform_add = "switch active"
+        else:
+            platform_add = "active"
+        ParseCommands.ParseSingleDev(response["output"], response["host"], dnac_core)
+        ifm = dnac_core.get(["Global", "platform","software-fed","l3ifm", response["host"]])
+        cmds = []
+        for l3le in ifm.keys():
+            cmds.append(f"show platform hardware fed {platform_add} fwd-asic abstraction print {l3le} 0")
+        ret = dnac.command_run(cmds,[device_uuid])
+        for response in ret:
+            ParseCommands.ParseSingleDev(response["output"], response["host"], dnac_core)
+        index0 = dnac_core.get(["Global", "platform", "hardware-fed", "abstraction", response["host"]])
+        indexes = []
+        goodcount = 0
+        failcount = 0
+        for abstract in index0.keys():
+            index = index0[abstract].get("index0")
+            if index in indexes:
+                print (f"duplicate entrie found {index} on {abstract} on device {response['host']}")
+                failcount = failcount + 1
+            else:
+                indexes.append(index)
+                goodcount=goodcount+1
+    print(f"L3_LEAD index analysis : found {goodcount} correct entries, {failcount} failures on {response['host']}")
+    return
+
+
+
 ''' Gets Database information to determine Edge Devices'''
 
 
@@ -44,7 +77,9 @@ def LispDBAnalysis(dnac, dnac_core):
     cpnodes = []
     lispdb = dnac_core.get(["lisp", "database"])
     tcpnodes = dnac_core.get(["lisp", "site"])
-
+    if tcpnodes is None:
+        print("No CP nodes found , exiting")
+        return
     if len(tcpnodes) == 0:
         print("No CP nodes found , exiting")
         return
@@ -291,6 +326,9 @@ def CheckRLOCreach(dnac, dnac_core):
     devices = {}
     roles = ["EDGENODE", "BORDERNODE"]
     for role in roles:
+        devs = dnac_core.get(["devices", dnac.fabric, role])
+        if devs is None:
+            return
         devices.update(dnac_core.get(["devices", dnac.fabric, role]))
     for device in devices:
         rlocips.append(device)

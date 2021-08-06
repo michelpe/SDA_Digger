@@ -294,6 +294,36 @@ def ParseAAA(output, key, hostname, dnac_core):
         pass
     return
 
+def ParseSoftwareFedL3ifm(output, key, hostname, dnac_core):
+    for lines in output:
+        if (re.match(r"^0x.*",lines)):
+            line= lines.split()
+            dnac_core.add(["Global", "platform","software-fed","l3ifm", hostname, line[0], {"if":line[1],"ifmid":line[2],"interface":line[3]}])
+
+def ParseSoftwareFed(output, key, hostname, dnac_core):
+    if key[-1]=="l3if-le":
+        ParseSoftwareFedL3ifm(output, key, hostname, dnac_core)
+    return
+
+def ParseHardwareAbstraction(output, key, hostname, dnac_core):
+    le_id=key[-2]
+    for line in output:
+        splitline=line.split()
+        for splits in splitline:
+            if re.match(r"index0.*",splits):
+                dnac_core.add(["Global", "platform","hardware-fed","abstraction",hostname,le_id,{"index0":splits.split(":")[-1]}])
+    return
+
+
+def ParsePlatform(output, key, hostname, dnac_core):
+    if key[1] == "software" :
+        if  key[2] == "fed":
+            ParseSoftwareFed(output, key, hostname, dnac_core)
+    elif key[1] == "hardware":
+        if "abstraction" in key:
+            ParseHardwareAbstraction(output, key, hostname, dnac_core)
+    return
+
 
 def ParseSingleDev(output, hostname, dnac_core):
     command = re.split(r"\n", output)[0]
@@ -328,6 +358,8 @@ def ParseSingleDev(output, hostname, dnac_core):
             ParseBFD(output, splitkey[1:], hostname, dnac_core)
         elif re.match(r"aaa", splitkey[1]):
             ParseAAA(output, splitkey[1:], hostname, dnac_core)
+        elif re.match(r"platform", splitkey[1]):
+            ParsePlatform(output, splitkey[1:], hostname, dnac_core)
         elif len(splitkey) > 6:
             if re.match(r"access-tunnel", splitkey[3]):
                 # ParseAccessTunnel(output, splitkey[1:], hostname,dnac_core)

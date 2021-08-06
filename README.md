@@ -12,7 +12,7 @@ build. By using multiple outputs on multiple devices consistency checks are perf
 to ensure that different components and different parts of the fabric have a unified
 view of how the fabric should be. If any inconsintency is being detected this will be flagged
 
-It also looks for some known problem patters and will alert when detected. For example
+It also looks for some known problem patterns and will alert when detected. For example
 if an Endpoint is detected on the fabric but no IP address, or an APIPA address is detected
 a warning is being flagged. Similarly, it does this for other features used inside
 the fabric

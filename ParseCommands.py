@@ -316,6 +316,8 @@ def ParseHardwareAbstraction(output, key, hostname, dnac_core):
 
 
 def ParsePlatform(output, key, hostname, dnac_core):
+    if len(key) < 3:
+         return
     if key[1] == "software" :
         if  key[2] == "fed":
             ParseSoftwareFed(output, key, hostname, dnac_core)

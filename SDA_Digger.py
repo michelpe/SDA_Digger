@@ -116,6 +116,7 @@ def build_hierarch(dnac, dnac_core):
             dnac_core.add(["topology", site, {"fabric": dnac.topo['fabrics'][resp['fabricName']]}])
 
 
+
 def find_wlc(dnac, dnac_core, resp):
     site = resp.get("site")
     if site is None:
@@ -213,9 +214,17 @@ def Build_Lisp_Fabric(dnac, dnac_core, fabric):
                 check_fabric(fabric, dnac, dnac_core)
                 break
     else:
-        print(f"No fabrics found, exiting")
-        exit()
-    # print(dnac_core.printit())
+        #fabric_list.append(fabric)
+        site=dnac.clisite
+        if site in dnac.topo['sites'].keys() and fabric is not None:
+            dnac.topo['fabrics'][fabric] = {"site": site, "id": dnac.topo['sites'][site]}
+            dnac_core.add(["topology", site, {"fabric": dnac.topo['fabrics'][fabric]}])
+            dnac.fabric = fabric
+            check_fabric(fabric, dnac, dnac_core)
+        else:
+            print(f"No fabrics found usind dynamic discovery. If fabrics are present please use -s <fabric site> and -f <fabric> option ")
+            exit()
+    return
 
 
 
@@ -379,13 +388,14 @@ def main(argv):
     print(f"Starting SDA Digger tool")
 
     try:
-        opts, args = getopt.getopt(argv, "hxd:u:p:f:d:l:b:e:", ["directory="])
+        opts, args = getopt.getopt(argv, "hxd:u:s:p:f:d:l:b:e:", ["directory="])
     except getopt.GetoptError:
         print('SDA_Digger.py -d <DNAC IP> -u <username> -p <password> -f <fabric> -l <logdirectory> -b <bundle directory>')
         print(
             f"Feedback/comments/bug reports : Sda_digger@protonmail.com or https://github.com/michelpe/SDA_Digger\n\n")
         sys.exit(2)
     esc_option = None
+    site = None
     for opt, arg in opts:
         if opt == '-h':
             print('SDA_Digger.py -d <DNAC IP> -u <username> -p <password> -f <fabric> -l <logdirectory> -b <bundle directory>')
@@ -406,6 +416,8 @@ def main(argv):
             logdir = arg
         elif opt in "-e":
              esc_option = arg
+        elif opt in "-s":
+             site = arg
         elif opt in "-b":
             inputdir = arg
             dnac_core = AnalysisCore.Analysis_Core()
@@ -418,6 +430,7 @@ def main(argv):
     if password is None:
         password = getpass()
     dnac = DNAC_Connector.DnacCon(dnac, username, password, logdir)
+    dnac.clisite = site
     if debug is True:
         dnac.debug = True
     while True:

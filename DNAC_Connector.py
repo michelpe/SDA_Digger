@@ -41,6 +41,7 @@ class DnacCon:
         self.debug = False
         self.crunnerretry = 0
         self.conn = None
+        self.clisite = None
 
         time.localtime()
         if server != "non-interactive":

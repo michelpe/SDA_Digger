@@ -740,15 +740,19 @@ def UnderlayMcastAnalysis(dnac, dnac_core, mcastunder):
     for mcastgr in mcastunder:
         underlay = dnac_core.get(["Global", "underlay mroute", mcastgr])
         for device in devinstances.keys():
-            for instance in devinstances[device]['instances'].keys():
-                if devinstances[device]['instances'][instance]['broadcast'] == mcastgr:
-                    mcastdevices.append(device)
-                    instances.add(instance)
+            if 'instances' in devinstances[device].keys():
+                for instance in devinstances[device]['instances'].keys():
+                    if devinstances[device]['instances'][instance]['broadcast'] == mcastgr:
+                        mcastdevices.append(device)
+                        instances.add(instance)
         mcastdevices = list(set(mcastdevices))
         print(f"Checking mcast for Layer 2 flood group(s) {mcastgr} on {len(mcastdevices)} devices")
         for mcastdevice in mcastdevices:
             minfo = dnac_core.get(["Global", "underlay mroute", mcastgr, mcastdevice])
             devip = dnac_core.get(["Global", "Devices", mcastdevice]).get("IP Address")
+            if minfo is None:
+                print(f"Group {mcastgr} not present on {mcastdevice}")
+                return
             if devip in minfo.keys():
                 if len(minfo[devip]['egress']) == 0:
                     print(
@@ -762,11 +766,12 @@ def UnderlayMcastAnalysis(dnac, dnac_core, mcastunder):
                     if vlan is not None:
                         mactable = devinstances = dnac_core.get(["Global", "mac", mcastdevice, vlan])
                         nummacs = 0
-                        for mac in mactable:
-                            if re.match(r"^Vl.*", mactable[mac].get("Int")):
-                                pass
-                            else:
-                                nummacs = nummacs + 1
+                        if mactable is not None:
+                            for mac in mactable:
+                                if re.match(r"^Vl.*", mactable[mac].get("Int")):
+                                    pass
+                                else:
+                                    nummacs = nummacs + 1
                 print(
                     f"Underlay Mcast: Device {mcastdevice} has no Mroute with itself as sender({devip}) to {mcastgr} , "
                     f"{nummacs} endpoints present in IP pools with flooding")

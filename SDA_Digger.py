@@ -320,7 +320,7 @@ def ReachabilityAnalysis(dnac, dnac_core):
 
 
 def McastUnderlay(dnac, dnac_core):
-    devices_id_list = BuildIdlist(dnac, dnac_core, ["EDGENODE"])
+    devices_id_list = BuildIdlist(dnac, dnac_core, ["EDGENODE","BORDERNODE"])
     instances = dnac_core.get(["fabric", "configured instances"])
     mcastunder = []
     for instance in instances:

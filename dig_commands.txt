@@ -42,6 +42,6 @@
 1:XE_BORDER:show lisp instance-id $l3inst ipv4 map-cache $ipv4
 1:XE_BORDER:show ip  cef $vrf $ipdest internal
 1:XE_BORDER:show ip route $vrf $ipdest
-1:XE_BORDER:show ip bgp vpnv4 $vrf $destipq
+1:XE_BORDER:show ip bgp vpnv4 $vrf $destip
 1:XE_WLC:show wireless client mac-address $macaddress detail
 1:XE_WLC:show wireless client mac-address $macdest detail

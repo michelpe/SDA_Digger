@@ -116,7 +116,6 @@ def build_hierarch(dnac, dnac_core):
             dnac_core.add(["topology", site, {"fabric": dnac.topo['fabrics'][resp['fabricName']]}])
 
 
-
 def find_wlc(dnac, dnac_core, resp):
     site = resp.get("site")
     if site is None:
@@ -136,6 +135,7 @@ def find_wlc(dnac, dnac_core, resp):
                         dnac.topo['reach'][primarywlc] = "Reachable"
 
     if dnac.wlc.get("uuid") is not None:
+        key = ""
         resp = dnac.geturl(f"/dna/intent/api/v1/network-device/{dnac.wlc.get('uuid')}")
         response = resp.get("response")
         if dnac.debug is True:
@@ -193,7 +193,7 @@ def check_fabric(fabric, dnac, dnac_core):
 
 
 def Build_Lisp_Fabric(dnac, dnac_core, fabric):
-    #print (fabric)
+    # print (fabric)
     if len(dnac.topo['fabrics']) == 1:
         print("Only one fabric found, proceeding")
         for fabric in dnac.topo['fabrics']:
@@ -214,33 +214,37 @@ def Build_Lisp_Fabric(dnac, dnac_core, fabric):
                 check_fabric(fabric, dnac, dnac_core)
                 break
     else:
-        #fabric_list.append(fabric)
-        site=dnac.clisite
+        # fabric_list.append(fabric)
+        site = dnac.clisite
         if site in dnac.topo['sites'].keys() and fabric is not None:
             dnac.topo['fabrics'][fabric] = {"site": site, "id": dnac.topo['sites'][site]}
             dnac_core.add(["topology", site, {"fabric": dnac.topo['fabrics'][fabric]}])
             dnac.fabric = fabric
             check_fabric(fabric, dnac, dnac_core)
         else:
-            print(f"No fabrics found usind dynamic discovery. If fabrics are present please use -s <fabric site> and -f <fabric> option ")
+            print(
+                f"No fabrics found usind dynamic discovery. If fabrics are present please use -s <fabric site> and -f <fabric> option ")
             exit()
     return
 
 
-
-
-def Check_L3IF(dnac,dnac_core):
-    ids=BuildIdlist(dnac, dnac_core, ["EDGENODE"])
+def Check_L3IF(dnac, dnac_core):
+    ids = BuildIdlist(dnac, dnac_core, ["EDGENODE"])
     for id in ids:
-        Analysis.Cat9_L3_Check(dnac,dnac_core,id)
+        Analysis.Cat9_L3_Check(dnac, dnac_core, id)
     return
+
 
 def SessionAnalysis(dnac, dnac_core):
     edge = dnac_core.get(["devices", dnac.fabric, "EDGENODE"])
-    print(f"Importing basic edge information for fabric {dnac.fabric}")
+    if edge is None:
+        edge = {}
+    else:
+        print(f"Importing basic edge information for fabric {dnac.fabric}")
     edges = []
     i = 0
     t = 0
+    ret = []
     for edge_dev in edge:
         edges.append(edge[edge_dev]["id"])
         eid = edge[edge_dev]["id"]
@@ -283,7 +287,11 @@ def CTSAnalysis(dnac, dnac_core):
 def DatabaseAnalysis(dnac, dnac_core):
     # data_core = AnalysisCore.Analysis_Core()
     edge = dnac_core.get(["devices", dnac.fabric, "EDGENODE"])
-    print(f"Importing basic edge information for fabric {dnac.fabric}")
+    if edge is None:
+        edge = {}
+    else:
+        print(f"Importing basic edge information for fabric {dnac.fabric}")
+    ret = []
     edges = []
     for edge_dev in edge:
         edges.append(edge[edge_dev]["id"])
@@ -298,6 +306,7 @@ def DatabaseAnalysis(dnac, dnac_core):
 
 
 def MapCacheAnalysis(dnac, dnac_core):
+    ret = []
     devices_id_list = BuildIdlist(dnac, dnac_core, ["EDGENODE", "BORDERNODE"])
     if len(devices_id_list) > 0:
         ret = dnac.command_run(mc_cmd_list, devices_id_list)
@@ -309,6 +318,7 @@ def MapCacheAnalysis(dnac, dnac_core):
 
 
 def ReachabilityAnalysis(dnac, dnac_core):
+    ret = []
     devices_id_list = BuildIdlist(dnac, dnac_core, ["EDGENODE", "BORDERNODE"])
     if len(devices_id_list) > 0:
         ret = dnac.command_run(["show ip route", "show clns neigh detail", "show bfd neigh detail"], devices_id_list)
@@ -320,7 +330,8 @@ def ReachabilityAnalysis(dnac, dnac_core):
 
 
 def McastUnderlay(dnac, dnac_core):
-    devices_id_list = BuildIdlist(dnac, dnac_core, ["EDGENODE","BORDERNODE"])
+    ret = []
+    devices_id_list = BuildIdlist(dnac, dnac_core, ["EDGENODE", "BORDERNODE"])
     instances = dnac_core.get(["fabric", "configured instances"])
     mcastunder = []
     for instance in instances:
@@ -390,7 +401,8 @@ def main(argv):
     try:
         opts, args = getopt.getopt(argv, "hxd:u:s:p:f:d:l:b:e:", ["directory="])
     except getopt.GetoptError:
-        print('SDA_Digger.py -d <DNAC IP> -u <username> -p <password> -f <fabric> -l <logdirectory> -b <bundle directory>')
+        print(
+            'SDA_Digger.py -d <DNAC IP> -u <username> -p <password> -f <fabric> -l <logdirectory> -b <bundle directory>')
         print(
             f"Feedback/comments/bug reports : Sda_digger@protonmail.com or https://github.com/michelpe/SDA_Digger\n\n")
         sys.exit(2)
@@ -398,7 +410,8 @@ def main(argv):
     site = None
     for opt, arg in opts:
         if opt == '-h':
-            print('SDA_Digger.py -d <DNAC IP> -u <username> -p <password> -f <fabric> -l <logdirectory> -b <bundle directory>')
+            print(
+                'SDA_Digger.py -d <DNAC IP> -u <username> -p <password> -f <fabric> -l <logdirectory> -b <bundle directory>')
             print(
                 f"Feedback/comments/bug reports : Sda_digger@protonmail.com or https://github.com/michelpe/SDA_Digger\n\n")
             sys.exit()
@@ -415,9 +428,9 @@ def main(argv):
         elif opt in "-l":
             logdir = arg
         elif opt in "-e":
-             esc_option = arg
+            esc_option = arg
         elif opt in "-s":
-             site = arg
+            site = arg
         elif opt in "-b":
             inputdir = arg
             dnac_core = AnalysisCore.Analysis_Core()

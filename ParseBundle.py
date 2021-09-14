@@ -14,7 +14,6 @@ IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
 or implied.
 """
 
-
 import os
 import re
 import DNAC_Connector
@@ -101,5 +100,5 @@ def ParseBundle(dnac_core, indir):
     Analysis.CheckRLOCreach(dnac, dnac_core)
     Analysis.CheckCTS(dnac, dnac_core)
     Analysis.checksvi(dnac, dnac_core)
-    Analysis.DuplicateEid(dnac,dnac_core)
+    Analysis.DuplicateEid(dnac, dnac_core)
     return

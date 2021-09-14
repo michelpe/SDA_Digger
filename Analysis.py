@@ -31,20 +31,22 @@ def LogIt(message, level):
         print(message)
 
 
-def Cat9_L3_Check(dnac,dnac_core,device_uuid):
-    #running commands for both switch active and active first to determine stack or chassis
-    ret = dnac.command_run(["sh platform software fed switch active ifm mappings l3if-le","sh pl so fed active ifm mappings l3if-le"], [device_uuid])
+def Cat9_L3_Check(dnac, dnac_core, device_uuid):
+    # running commands for both switch active and active first to determine stack or chassis
+    ret = dnac.command_run(
+        ["sh platform software fed switch active ifm mappings l3if-le", "sh pl so fed active ifm mappings l3if-le"],
+        [device_uuid])
     for response in ret:
-        if re.match(r".*sh platform software fed switch active ifm mappings l3if-le.*",response["output"]):
+        if re.match(r".*sh platform software fed switch active ifm mappings l3if-le.*", response["output"]):
             platform_add = "switch active"
         else:
             platform_add = "active"
         ParseCommands.ParseSingleDev(response["output"], response["host"], dnac_core)
-        ifm = dnac_core.get(["Global", "platform","software-fed","l3ifm", response["host"]])
+        ifm = dnac_core.get(["Global", "platform", "software-fed", "l3ifm", response["host"]])
         cmds = []
         for l3le in ifm.keys():
             cmds.append(f"show platform hardware fed {platform_add} fwd-asic abstraction print {l3le} 0")
-        ret = dnac.command_run(cmds,[device_uuid])
+        ret = dnac.command_run(cmds, [device_uuid])
         for response in ret:
             ParseCommands.ParseSingleDev(response["output"], response["host"], dnac_core)
         index0 = dnac_core.get(["Global", "platform", "hardware-fed", "abstraction", response["host"]])
@@ -54,14 +56,13 @@ def Cat9_L3_Check(dnac,dnac_core,device_uuid):
         for abstract in index0.keys():
             index = index0[abstract].get("index0")
             if index in indexes:
-                print (f"duplicate entrie found {index} on {abstract} on device {response['host']}")
+                print(f"duplicate entrie found {index} on {abstract} on device {response['host']}")
                 failcount = failcount + 1
             else:
                 indexes.append(index)
-                goodcount=goodcount+1
+                goodcount = goodcount + 1
     print(f"L3_LEAD index analysis : found {goodcount} correct entries, {failcount} failures on {response['host']}")
     return
-
 
 
 ''' Gets Database information to determine Edge Devices'''
@@ -212,7 +213,7 @@ def CheckEdgeMC(dnac, dnac_core):
         LogIt(
             f"Error: No LISP Map Cache entries found to parse", 1)
         return
-    if  dnac_core.get(["lisp", "site"]) is None:
+    if dnac_core.get(["lisp", "site"]) is None:
         return
     for edgename in lispmc.keys():
         statdevs = statdevs + 1
@@ -601,7 +602,7 @@ def DatabaseTooFabric(dnac, dnac_core):
     stateids = 0
     statfail = 0
     lispdb = dnac_core.get(["lisp", "database"])
-    #print(lispdb)
+    # print(lispdb)
     if lispdb is None:
         LogIt(
             f"Error: No LISP Database entries found to parse", 1)
@@ -622,7 +623,7 @@ def DatabaseTooFabric(dnac, dnac_core):
                     eidsource = eidinfo["eSource"]
                     eidtype = eidinfo["eSource"]
                     rloc = eidinfo["RLOC"][0]
-                    #print(f"{rloc.keys()} {eidtype} {eidsource} {edgeeid}")
+                    # print(f"{rloc.keys()} {eidtype} {eidsource} {edgeeid}")
                     eidtest = dnac_core.get(["fabric", edgeinstance, edgeeid])
                     local_macs = dnac_core.get(["lisp", "svi_interface", edgename])
                     if local_macs is None:
@@ -729,7 +730,7 @@ def Config2Fabric(dnac, dnac_core):
                 instances[instance] = devices[device]["instances"][instance]
     dnac_core.add(
         ["fabric", "configured instances", instances])
-    devices = dnac_core.get(["lisp","config-map-resolver"])
+    devices = dnac_core.get(["lisp", "config-map-resolver"])
     return
 
 
@@ -965,11 +966,11 @@ def Digger(dnac, dnac_core):
     return
 
 
-def DuplicateEid(dnac,dnac_core):
-    db=dnac_core.get(["lisp", "database"])
-    teid={}
-    unique=0
-    duplicate=0
+def DuplicateEid(dnac, dnac_core):
+    db = dnac_core.get(["lisp", "database"])
+    teid = {}
+    unique = 0
+    duplicate = 0
     for device in db.keys():
         local_macs = dnac_core.get(["lisp", "svi_interface", device])
         local_addr = []
@@ -982,12 +983,14 @@ def DuplicateEid(dnac,dnac_core):
         for instance in db[device].keys():
             for eid in db[device][instance].keys():
                 if "dynamic-eid" in db[device][instance][eid]["Source"] and eid.split("/")[0] not in local_addr:
-                   merged=f"{instance}:{eid}"
-                   if merged in teid.keys():
-                      print(f"Duplicate Addresses Analysis:Duplicate EID found {merged} found on device {device} also seen on {teid[merged]}")
-                      duplicate=duplicate+1
-                   else:
-                      teid[merged]=device
-                      unique=unique+1
-    print(f"Duplicate Addresses Analysis:Checked {unique+duplicate} addresses in LISP databases, found {duplicate} duplicate addresses ")
+                    merged = f"{instance}:{eid}"
+                    if merged in teid.keys():
+                        print(
+                            f"Duplicate Addresses Analysis:Duplicate EID found {merged} found on device {device} also seen on {teid[merged]}")
+                        duplicate = duplicate + 1
+                    else:
+                        teid[merged] = device
+                        unique = unique + 1
+    print(
+        f"Duplicate Addresses Analysis:Checked {unique + duplicate} addresses in LISP databases, found {duplicate} duplicate addresses ")
     return

@@ -115,9 +115,10 @@ def LispDBAnalysis(dnac, dnac_core):
                 wlcip = []
 
             for edgeeid in lispdb.get(edgename).get(edgeinstance).keys():
-                # print (lispdb.get(edgename).get(edgeinstance).get(edgeeid).get("Source"))
+                #print (lispdb.get(edgename).get(edgeinstance).get(edgeeid).get("Source"))
                 # if lispdb.get(edgename).get(edgeinstance).get(edgeeid).get("eSource") != "dynamic-eid":
-                if "site-registration," not in lispdb.get(edgename).get(edgeinstance).get(edgeeid).get("Source"):
+                esource = lispdb.get(edgename).get(edgeinstance).get(edgeeid).get("Source")
+                if "site-registration," not in esource and "route-import," not in esource:
                     edgeeid = edgeeid.split(",")[0]
                     if edgeeid.split('/')[0] in local_addr:
                         # print(  f"Debug: {edgename} {edgeinstance} {edgeeid} {edgeinstanceaf} is local address")
@@ -288,6 +289,31 @@ def Stats():
     print(f"Number of Fabric Enabled AP     : {totalap}")
     return
 
+def CheckAP_fp_rp(dnac,dnac_core):
+    success = failed = passed = 0
+    access_tunnels=dnac_core.get(["Global","AccessTunnel"])
+    if access_tunnels is None:
+        return
+    plat_accestunnels=dnac_core.get(["Global","PlatformAccessTunnel"])
+    if plat_accestunnels is None:
+        print(f"Unable to verify platform state for Accestunnels")
+        return
+    for edge in access_tunnels.keys():
+        if dnac_core.get(["Global", "PlatformAccessTunnel", edge, "failed"]) is not None:
+            passed = passed + 1
+            #skipping devices where cli's failed on FP/RP (9400 not collecting right into in fabric bundle mode)
+        else:
+            for tunnel in access_tunnels[edge].keys():
+                if dnac_core.get(["Global","PlatformAccessTunnel",edge,"R0",tunnel]) is None:
+                    print(f"Access-Tunnel Analysis: Platform layer on {edge}  not having an entry on R0 for {tunnel} ")
+                    failed = failed + 1
+                elif dnac_core.get(["Global", "PlatformAccessTunnel", edge, "F0", tunnel]) is None:
+                    print(f"Access-Tunnel Analysis: Platform layer on {edge} not having an entry on F0 for {tunnel} ")
+                    failed = failed + 1
+                else:
+                    success = success + 1
+    print (f"Access-Tunnel Analysis: Verified {len(access_tunnels.keys())} devices:{success} Access tunnels up {failed}",
+           f"were not up on platform side, {passed} edges were skipped")
 
 def CheckBFD(dnac, dnac_core):
     bfdb = dnac_core.get(["Global", "bfd"])
@@ -382,6 +408,7 @@ def CheckLispSession(dnac, dnac_core):
     for edge in edgenodes:
         # print(edgenodes[edge]["name"])
         devices.append(edgenodes[edge]["name"])
+    #print(devices)
     esession = fsession = fails = 0
     for device in set(devices):
         sesdbraw = dnac_core.get(['lisp', 'session', device])

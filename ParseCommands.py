@@ -24,10 +24,6 @@ def version(output, key, hostname, dnac_core):
     return
 
 
-def ParseWireless(output, key, hostname, dnac_core):
-    return
-
-
 def ParseAP(output, key, hostname, dnac_core):
     return
 
@@ -321,9 +317,95 @@ def ParsePlatform(output, key, hostname, dnac_core):
     if key[1] == "software" :
         if  key[2] == "fed":
             ParseSoftwareFed(output, key, hostname, dnac_core)
+        elif key[2] == "access-tunnel":
+            ParsePlatAccessTunnel(output,key,hostname,dnac_core)
     elif key[1] == "hardware":
         if "abstraction" in key:
             ParseHardwareAbstraction(output, key, hostname, dnac_core)
+    return
+
+
+def ParseFabricAP(output, key, hostname, dnac_core):
+    startfound = False
+    for line in output:
+        if re.match(r"-------------.*",line):
+            startfound = True
+        elif startfound is True:
+            linesplit = line.split()
+            if len(linesplit) > 7 :
+                dnac_core.add(["Global", "ap-wlc", hostname, linesplit[-6],{"Name":linesplit[0],"State":linesplit[-1],
+                "Country":linesplit[-3],"Location":linesplit[-4],"Radio-mac":linesplit[-5],"Base-mac":linesplit[-6],
+                "Model":linesplit[2],"IP":linesplit[-2],"Radios":linesplit[1]}])
+    return
+
+def ParseFabricWlan(output, key, hostname, dnac_core):
+    startfound = False
+    for line in output:
+        if re.match(r"-------------.*",line):
+            startfound = True
+        elif startfound is True:
+            linesplit = line.split()
+            if len(linesplit) > 3:
+                dnac_core.add(["Global", "wlan-wlc",hostname,linesplit[0],{"SSID":linesplit[2],"Profile":linesplit[1],
+                               "State":linesplit[-1]}])
+
+def ParseFabricClient(output, key, hostname, dnac_core):
+    startfound = False
+    for line in output:
+        if re.match(r"-------------.*",line):
+            startfound = True
+        elif startfound is True:
+            linesplit = line.split()
+            if len(linesplit) > 4:
+                dnac_core.add(["Global","fabric-wclient",linesplit[1],linesplit[2],linesplit[0],{"state":linesplit[-3],
+                              "method":linesplit[-1],"Protocol":linesplit[-2]}])
+    return
+
+
+
+def ParseAccessTunnel(output, key, hostname, dnac_core):
+    accesstunnels ={}
+    for line in output:
+        linesplit=line.split()
+        if len(linesplit)>1:
+            if re.match(r"^Ac\d.*",linesplit[0]):
+                if re.match(r".*\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}.*",linesplit[1]):
+                    accesstunnels[linesplit[0]]={"FE_IP":linesplit[1],"AP_IP":linesplit[2],"Port":linesplit[-1]}
+                else:
+                    if (accesstunnels.get(linesplit[0])) is not None:
+                        accesstunnels[linesplit[0]]["Uptime"]=" ".join(linesplit[2:])
+                    dnac_core.add(["Global","AccessTunnel",hostname,linesplit[0],accesstunnels[linesplit[0]]])
+
+
+def ParsePlatAccessTunnel(output, key, hostname, dnac_core):
+    startfound = False
+    if key[-1].upper() == "F0" or key [-1].upper() == "R0":
+        proc_loc = key[-1].upper()
+        for line in output:
+            if re.match(r".*Invalid input detected at.*", line):
+                dnac_core.add(["Global", "PlatformAccessTunnel", hostname, "failed",proc_loc,{"cli":key}])
+            elif re.match(r"-------------.*", line):
+                startfound = True
+            elif startfound is True:
+                linesplit = line.split()
+                if len(linesplit)>1:
+                    if re.match(r"^Ac\d*",linesplit[0]):
+                        dnac_core.add(["Global", "PlatformAccessTunnel", hostname,proc_loc, linesplit[0],
+                                       {"FE_IP":linesplit[1],"AP_IP":linesplit[2],"IF_ID":linesplit[5]}])
+
+
+def ParseWireless(output, key, hostname, dnac_core):
+    if key[1] == "fabric":
+        if key[2] == "client":
+            ParseFabricClient(output, key, hostname, dnac_core)
+    return
+
+
+def ParseFabric(output, key, hostname, dnac_core):
+    if key[1]=="ap":
+        ParseFabricAP(output, key, hostname, dnac_core)
+    if key[1]=="wlan":
+        ParseFabricWlan(output, key, hostname, dnac_core)
     return
 
 
@@ -344,8 +426,7 @@ def ParseSingleDev(output, hostname, dnac_core):
         elif re.match(r"running", splitkey[1]):
             ParseConfig(output, hostname, dnac_core)
         elif re.match(r"access-tunnel", splitkey[1]):
-            # ParseAccessTunnel(output, splitkey[1:], hostname,dnac_core)
-            pass
+            ParseAccessTunnel(output, splitkey[1:], hostname,dnac_core)
         elif re.match(r"device-tracking", splitkey[1]):
             ParseDT(output, splitkey[1:], hostname, dnac_core)
         elif re.match(r"wireless", splitkey[1]):
@@ -362,6 +443,8 @@ def ParseSingleDev(output, hostname, dnac_core):
             ParseAAA(output, splitkey[1:], hostname, dnac_core)
         elif re.match(r"platform", splitkey[1]):
             ParsePlatform(output, splitkey[1:], hostname, dnac_core)
+        elif re.match(r"fabric", splitkey[1]):
+            ParseFabric(output, splitkey[1:], hostname, dnac_core)
         elif len(splitkey) > 6:
             if re.match(r"access-tunnel", splitkey[3]):
                 # ParseAccessTunnel(output, splitkey[1:], hostname,dnac_core)

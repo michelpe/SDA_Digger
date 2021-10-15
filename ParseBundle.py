@@ -80,7 +80,7 @@ def build_dnac_data(dnac, dnac_core):
 
 
 # Read all files in offline analysis bundle and execute various analysis scripts on offline bundle
-def ParseBundle(dnac_core, indir):
+def ParseBundle(dnac_core, indir,debug):
     dnac = DNAC_Connector.DnacCon("non-interactive", "", "", "")
     files = os.listdir(indir)
     if files is None:
@@ -100,5 +100,8 @@ def ParseBundle(dnac_core, indir):
     Analysis.CheckRLOCreach(dnac, dnac_core)
     Analysis.CheckCTS(dnac, dnac_core)
     Analysis.checksvi(dnac, dnac_core)
+    Analysis.CheckAP_fp_rp(dnac, dnac_core)
     Analysis.DuplicateEid(dnac, dnac_core)
+    if debug is True:
+        dnac_core.printit()
     return

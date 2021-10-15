@@ -29,8 +29,8 @@ edge_cmd_list = [["show lisp session", "show lisp instance * ethernet database",
                   "sh lisp instance-id * ipv6 database", "show device-tracking database"]
                  ]
 session_cmd_list = [
-    ["show lisp session", "show lisp instance * ethernet database", "sh lisp instance-id * ipv4 database",
-     "sh lisp instance-id * ipv6 database"]]
+    "show lisp session", "show lisp instance * ethernet database", "sh lisp instance-id * ipv4 database",
+    "sh lisp instance-id * ipv6 database"]
 
 cts_cmd_list = [
     "sh cts environment", "sh cts role-based counters", "sh cts role-based permissions",
@@ -44,6 +44,10 @@ db_cmd_list = ["show lisp instance-id * ethernet database", "show lisp instance-
 
 mc_cmd_list = ["show lisp instance-id * ethernet map-cache", "show lisp instance-id * ipv4 map-cache",
                "show lisp instance-id * ipv6 map-cache"]
+
+wlc_cmd_list = ["show ap summary", "show fabric ap summary", "show fabric wlan summary",
+                "sh wireless fabric client summary ", "sh wireless fabric summary "]
+apedge_cmd_list = ["show access-tunnel summary"]
 
 
 def BuildIdlist(dnac, dnac_core, roles):
@@ -60,14 +64,31 @@ def BuildIdlist(dnac, dnac_core, roles):
 def printraw(ret):
     answer = input("Analysis complete, print outputs y/n:")
     if answer == "y":
+        devices = input("Enter for all devices or specify host:")
         for responses in ret:
-            print(f"***********{responses['host']}**********")
-            print(f"{responses['output']}")
+            if len(devices) < 3 or devices.lower() == responses['host'].lower():
+                print(f"***********{responses['host']}**********")
+                print(f"{responses['output']}")
     return
 
 
 def check_dev(dnac, dnac_core, fabric, dev):
     resp = dnac.geturl(f"/dna/intent/api/v1/business/sda/device?deviceIPAddress={dev['managementIpAddress']}")
+
+    uuid = dev['instanceUuid']
+    dnac.topo['devices'][uuid] = dev['hostname']
+    dnac.topo['hostnames'][dev['hostname']] = uuid
+    dnac.topo['ip2uuid'][dev["managementIpAddress"]] = uuid
+    dnac.topo['reach'][uuid] = dev['reachabilityStatus']
+    if re.match(r".*9[235]\d\d.*", dev['type']):
+        dnac.topo['stack'][uuid] = "stackable"
+    elif re.match(r".*9[46]\d\d.*", dev['type']):
+        dnac.topo['stack'][uuid] = "chassis"
+    else:
+        dnac.topo['stack'][uuid] = "other"
+    if dev['reachabilityStatus'] == "Unreachable":
+        print(f"{dev['hostname']} is in state {dev['reachabilityStatus']}")
+
     if "response" in resp.keys():
         if resp['response']['status'] == "success":
             roles = resp['response']['roles']
@@ -81,14 +102,20 @@ def check_dev(dnac, dnac_core, fabric, dev):
                 for role in roles:
                     dnac_core.add(["devices", fabric, role, dev['managementIpAddress'],
                                    {"name": dev["hostname"], "IOS": dev['softwareVersion'], "id": uuid,
-                                    "roles": roles, "reachability": dev['reachabilityStatus']}])
+                                    "roles": roles, "reachability": dev['reachabilityStatus'], "type": dev['type']}])
                     dnac_core.add(["Global", "Devices", dev["hostname"], {"IP Address": dev["managementIpAddress"]}])
-                    dnac.topo['devices'][uuid] = dev['hostname']
-                    dnac.topo['hostnames'][dev['hostname']] = uuid
-                    dnac.topo['ip2uuid'][dev["managementIpAddress"]] = uuid
-                    dnac.topo['reach'][uuid] = dev['reachabilityStatus']
-                    if dev['reachabilityStatus'] == "Unreachable":
-                        print(f"{dev['hostname']} is in state {dev['reachabilityStatus']}")
+        else:
+            # API not reporting pure border nodes with edge api call, checking if device is border node
+            resp = dnac.geturl(
+                f"/dna/intent/api/v1/business/sda/border-device?deviceIPAddress={dev['managementIpAddress']}")
+            if "id" in resp.keys():
+                roles = ["BORDERNODE"]
+                role = "BORDERNODE"
+                dnac_core.add(["devices", fabric, role, dev['managementIpAddress'],
+                               {"name": dev["hostname"], "IOS": dev['softwareVersion'], "id": uuid,
+                                "roles": roles, "reachability": dev['reachabilityStatus'], "type": dev['type']}])
+                dnac_core.add(["Global", "Devices", dev["hostname"], {"IP Address": dev["managementIpAddress"]}])
+                print(f"{dev['hostname']} has role(s) {roles}")
     else:
         print(f"Error retrieving SDA API calls needed, possible DNAC version 1.x used")
         exit()
@@ -99,7 +126,7 @@ def build_hierarch(dnac, dnac_core):
     resp = dnac.geturl("/dna/intent/api/v1/site")
     sites = resp["response"]
     site_view = []
-    dnac.topo = {'sites': {}, 'fabrics': {}, 'devices': {}, 'ip2uuid': {}, 'reach': {}, 'hostnames': {}}
+    dnac.topo = {'sites': {}, 'fabrics': {}, 'devices': {}, 'ip2uuid': {}, 'reach': {}, 'hostnames': {}, 'stack': {}}
     for site in sites:
         if 'parentId' in site.keys():
             site_view.append(site['siteNameHierarchy'])
@@ -108,6 +135,8 @@ def build_hierarch(dnac, dnac_core):
     print("Discovered Areas/Buildings/floors:")
     [print(x) for x in site_view]
     fabric_list = []
+    if dnac.clisite is not None and dnac.fabric is not None:
+        return
     for site in site_view:
         resp = dnac.geturl(f"/dna/intent/api/v1/business/sda/fabric-site?siteNameHierarchy={site.replace(' ', '+')}")
         if resp['status'] == "success":
@@ -223,44 +252,24 @@ def Build_Lisp_Fabric(dnac, dnac_core, fabric):
             check_fabric(fabric, dnac, dnac_core)
         else:
             print(
-                f"No fabrics found usind dynamic discovery. If fabrics are present please use -s <fabric site> and -f <fabric> option ")
+                f"No fabrics found usind dynamic discovery. If fabrics are present please use -s <fabric site> and -f "
+                f"<fabric> option ")
             exit()
     return
 
 
 def Check_L3IF(dnac, dnac_core):
     ids = BuildIdlist(dnac, dnac_core, ["EDGENODE"])
-    for id in ids:
-        Analysis.Cat9_L3_Check(dnac, dnac_core, id)
+    for leid in ids:
+        Analysis.Cat9_L3_Check(dnac, dnac_core, leid)
     return
 
 
 def SessionAnalysis(dnac, dnac_core):
-    edge = dnac_core.get(["devices", dnac.fabric, "EDGENODE"])
-    if edge is None:
-        edge = {}
-    else:
-        print(f"Importing basic edge information for fabric {dnac.fabric}")
-    edges = []
-    i = 0
-    t = 0
-    ret = []
-    for edge_dev in edge:
-        edges.append(edge[edge_dev]["id"])
-        eid = edge[edge_dev]["id"]
-        resp = dnac.geturl(f"/dna/intent/api/v1/network-device/{eid}/config")
-        # print(edge[edge_dev])
-        ParseCommands.ParseConfig(resp["response"], edge[edge_dev]["name"], dnac_core)
-        i = i + 1
-        t = t + 1
-        if len(edges) > 100 or i == len(edge):
-            for cmd in session_cmd_list:
-                ret = dnac.command_run(cmd, edges)
-                for responses in ret:
-                    ParseCommands.ParseSingleDev(responses["output"], responses["host"], dnac_core)
-            print(f"Completed import on {t} edges , total imported {i}")
-            t = 0
-            edges = []
+    ids = BuildIdlist(dnac, dnac_core, ["BORDERNODE", "EDGENODE"])
+    ret = dnac.command_run(session_cmd_list, ids)
+    for responses in ret:
+        ParseCommands.ParseSingleDev(responses["output"], responses["host"], dnac_core)
     Analysis.CheckLispSession(dnac, dnac_core)
     printraw(ret)
     return
@@ -353,6 +362,27 @@ def McastUnderlay(dnac, dnac_core):
     return
 
 
+def WirelessAP(dnac, dnac_core):
+    ret = []
+    full_ret = []
+    wlcid = dnac.wlc.get("uuid")
+    if wlcid is None:
+        print("No WLC found")
+        return
+    # Assuming for now WLC is IOS-XE based, add check later
+    ret = dnac.command_run(wlc_cmd_list, [wlcid])
+    for responses in ret:
+        ParseCommands.ParseSingleDev(responses["output"], responses["host"], dnac_core)
+    full_ret.extend(ret)
+    devices_id_list = BuildIdlist(dnac, dnac_core, ["EDGENODE"])
+    ret = dnac.command_run(apedge_cmd_list, devices_id_list)
+    for responses in ret:
+        ParseCommands.ParseSingleDev(responses["output"], responses["host"], dnac_core)
+    full_ret.extend(ret)
+    printraw(full_ret)
+    return
+
+
 def Menu(dnac, dnac_core):
     while True:
         print(f"\n\n\nPlease choose one of the following options:")
@@ -379,6 +409,8 @@ def Menu(dnac, dnac_core):
             CTSAnalysis(dnac, dnac_core)
         elif choice == "7":
             McastUnderlay(dnac, dnac_core)
+        elif choice == "8":
+            WirelessAP(dnac, dnac_core)
         elif choice == "d":
             print(dnac_core.printit())
         elif choice == "r":
@@ -402,7 +434,7 @@ def main(argv):
         opts, args = getopt.getopt(argv, "hxd:u:s:p:f:d:l:b:e:", ["directory="])
     except getopt.GetoptError:
         print(
-            'SDA_Digger.py -d <DNAC IP> -u <username> -p <password> -f <fabric> -l <logdirectory> -b <bundle directory>')
+            'SDA_Digger.py -d <DNAC IP> -u <user> -p <password> -f <fabric> -l <logdirectory> -b <bundle directory>')
         print(
             f"Feedback/comments/bug reports : Sda_digger@protonmail.com or https://github.com/michelpe/SDA_Digger\n\n")
         sys.exit(2)
@@ -411,9 +443,11 @@ def main(argv):
     for opt, arg in opts:
         if opt == '-h':
             print(
-                'SDA_Digger.py -d <DNAC IP> -u <username> -p <password> -f <fabric> -l <logdirectory> -b <bundle directory>')
+                'SDA_Digger.py -d <DNAC IP> -u <username> -p <password> -f <fabric> -l <logdirectory> -b <bundle '
+                'directory>')
             print(
-                f"Feedback/comments/bug reports : Sda_digger@protonmail.com or https://github.com/michelpe/SDA_Digger\n\n")
+                f"Feedback/comments/bug reports : Sda_digger@protonmail.com or "
+                f"https://github.com/michelpe/SDA_Digger\n\n")
             sys.exit()
         elif opt == "-d":
             dnac = arg
@@ -434,7 +468,7 @@ def main(argv):
         elif opt in "-b":
             inputdir = arg
             dnac_core = AnalysisCore.Analysis_Core()
-            ParseBundle.ParseBundle(dnac_core, inputdir)
+            ParseBundle.ParseBundle(dnac_core, inputdir,debug)
             exit()
     if dnac is None:
         dnac = input("DNAC IP address :")

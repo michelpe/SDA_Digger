@@ -20,6 +20,7 @@ import http.client
 import json
 import time
 import os
+import re
 
 
 class DnacCon:
@@ -235,6 +236,21 @@ class DnacCon:
         return ret
 
     def command_run_dev_batch(self, commands, devs):
+        tret = []
+        cmds = []
+        platcmds = []
+        for cmd in commands:
+            if re.match(r".*\$switchactive",cmd):
+                platcmds.append(cmd)
+            else:
+                cmds.append(cmd)
+        if len(platcmds) == 0:
+           tret = self.command_run_dev_batch_run(commands, devs)
+           return tret
+
+        return tret
+
+    def command_run_dev_batch_run(self, commands, devs):
         tret = []
         i = 0
         t = 0

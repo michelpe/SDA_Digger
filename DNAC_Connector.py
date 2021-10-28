@@ -43,6 +43,7 @@ class DnacCon:
         self.crunnerretry = 0
         self.conn = None
         self.clisite = None
+        self.bypassprint = True
 
         time.localtime()
         if server != "non-interactive":

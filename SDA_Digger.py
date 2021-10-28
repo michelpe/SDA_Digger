@@ -61,7 +61,9 @@ def BuildIdlist(dnac, dnac_core, roles):
     return devid
 
 
-def printraw(ret):
+def printraw(ret,dnac):
+    if dnac.bypassprint is True:
+        return
     answer = input("Analysis complete, print outputs y/n:")
     if answer == "y":
         devices = input("Enter for all devices or specify host:")
@@ -271,7 +273,7 @@ def SessionAnalysis(dnac, dnac_core):
     for responses in ret:
         ParseCommands.ParseSingleDev(responses["output"], responses["host"], dnac_core)
     Analysis.CheckLispSession(dnac, dnac_core)
-    printraw(ret)
+    printraw(ret,dnac)
     return
 
 
@@ -289,7 +291,7 @@ def CTSAnalysis(dnac, dnac_core):
         ParseCommands.ParseSingleDev(responses["output"], responses["host"], dnac_core)
     Analysis.CheckAuth(dnac, dnac_core)
     Analysis.CheckCTS(dnac, dnac_core)
-    printraw(ret)
+    printraw(ret, dnac)
     return
 
 
@@ -310,7 +312,7 @@ def DatabaseAnalysis(dnac, dnac_core):
             ParseCommands.ParseSingleDev(responses["output"], responses["host"], dnac_core)
         print(f"Completed import on {len(edges)} edges")
     failed = Analysis.LispDBAnalysis(dnac, dnac_core)
-    printraw(ret)
+    printraw(ret, dnac)
     return
 
 
@@ -322,7 +324,7 @@ def MapCacheAnalysis(dnac, dnac_core):
         for responses in ret:
             ParseCommands.ParseSingleDev(responses["output"], responses["host"], dnac_core)
     Analysis.CheckEdgeMC(dnac, dnac_core)
-    printraw(ret)
+    printraw(ret, dnac)
     return
 
 
@@ -334,7 +336,7 @@ def ReachabilityAnalysis(dnac, dnac_core):
         for responses in ret:
             ParseCommands.ParseSingleDev(responses["output"], responses["host"], dnac_core)
     Analysis.CheckRLOCreach(dnac, dnac_core)
-    printraw(ret)
+    printraw(ret, dnac)
     return
 
 
@@ -358,7 +360,7 @@ def McastUnderlay(dnac, dnac_core):
         for responses in ret:
             ParseCommands.ParseSingleDev(responses["output"], responses["host"], dnac_core)
     Analysis.UnderlayMcastAnalysis(dnac, dnac_core, mcastunder)
-    printraw(ret)
+    printraw(ret, dnac)
     return
 
 
@@ -379,7 +381,7 @@ def WirelessAP(dnac, dnac_core):
     for responses in ret:
         ParseCommands.ParseSingleDev(responses["output"], responses["host"], dnac_core)
     full_ret.extend(ret)
-    printraw(full_ret)
+    printraw(full_ret,dnac)
     return
 
 
@@ -393,6 +395,7 @@ def Menu(dnac, dnac_core):
         print(f"5: Authentication and CTS enviroment checking")
         print(f"6: Data Collection based on Endpoint")
         print(f"7: IP Multicast Underlay checks")
+        print(f"a: Perform All Analysis checks")
         print(f"d: Dump Datastructures")
         print(f"r: New Fabric Selection")
         print(f"q: Quit")
@@ -419,6 +422,21 @@ def Menu(dnac, dnac_core):
             exit()
         elif choice == "6":
             Analysis.Digger(dnac, dnac_core)
+        elif choice == "a":
+            dnac.bypassprint = True
+            SessionAnalysis(dnac, dnac_core)
+            DatabaseAnalysis(dnac, dnac_core)
+            MapCacheAnalysis(dnac, dnac_core)
+            ReachabilityAnalysis(dnac, dnac_core)
+            CTSAnalysis(dnac, dnac_core)
+            McastUnderlay(dnac, dnac_core)
+
+
+
+
+
+
+
 
 
 def main(argv):

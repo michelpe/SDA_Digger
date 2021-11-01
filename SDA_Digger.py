@@ -49,6 +49,10 @@ wlc_cmd_list = ["show ap summary", "show fabric ap summary", "show fabric wlan s
                 "sh wireless fabric client summary ", "sh wireless fabric summary "]
 apedge_cmd_list = ["show access-tunnel summary"]
 
+EDGEROLES = ["EDGENODE", "EDGE NODE"]
+BORDERROLES = ["BORDER NODE", "BORDERNODE"]
+MSROLES = ["MAPSERVER","CONTROL PLANE"]
+
 
 def BuildIdlist(dnac, dnac_core, roles):
     devices = {}
@@ -76,7 +80,11 @@ def printraw(ret,dnac):
 
 def check_dev(dnac, dnac_core, fabric, dev):
     resp = dnac.geturl(f"/dna/intent/api/v1/business/sda/device?deviceIPAddress={dev['managementIpAddress']}")
-
+    if "status" in resp.keys():
+        if resp["status"]=="failed":
+           resp = dnac.geturl(f"/dna/intent/api/v1/business/sda/device?deviceManagementIpAddress={dev['managementIpAddress']}")
+           #recreateing hierachie compatigle with pre 2.2.3
+           resp["response"] = resp
     uuid = dev['instanceUuid']
     dnac.topo['devices'][uuid] = dev['hostname']
     dnac.topo['hostnames'][dev['hostname']] = uuid
@@ -90,11 +98,18 @@ def check_dev(dnac, dnac_core, fabric, dev):
         dnac.topo['stack'][uuid] = "other"
     if dev['reachabilityStatus'] == "Unreachable":
         print(f"{dev['hostname']} is in state {dev['reachabilityStatus']}")
-
     if "response" in resp.keys():
         if resp['response']['status'] == "success":
-            roles = resp['response']['roles']
-            print(f"{dev['hostname']} has role(s) {resp['response']['roles']}")
+            troles = resp['response']['roles']
+            roles =[]
+            for trole in troles:
+                if trole.upper() in MSROLES:
+                    roles.append("MAPSERVER")
+                if trole.upper() in BORDERROLES:
+                    roles.append("BORDERNODE")
+                if trole.upper() in EDGEROLES:
+                    roles.append("EDGENODE")
+            print(f"{dev['hostname']} has role(s) {roles}")
             resp = dnac.geturl(f"/dna/intent/api/v1/network-device?managementIpAddress={dev['managementIpAddress']}")
             dnac.devices[dev['hostname']] = resp.get("response")
             # print(dev["hostname"])
@@ -142,9 +157,16 @@ def build_hierarch(dnac, dnac_core):
     for site in site_view:
         resp = dnac.geturl(f"/dna/intent/api/v1/business/sda/fabric-site?siteNameHierarchy={site.replace(' ', '+')}")
         if resp['status'] == "success":
-            fabric_list.append(resp['fabricName'])
-            dnac.topo['fabrics'][resp['fabricName']] = {"site": site, "id": dnac.topo['sites'][site]}
-            dnac_core.add(["topology", site, {"fabric": dnac.topo['fabrics'][resp['fabricName']]}])
+            fabname = None
+            if "fabricSiteName" in resp.keys():
+                fabric_list.append(resp['fabricSiteName'])
+                fabname = resp['fabricSiteName']
+            elif "fabricName" in resp.keys():
+                fabric_list.append(resp['fabricName'])
+                fabname=resp['fabricName']
+            if fabname is not None:
+                dnac.topo['fabrics'][fabname] = {"site": site, "id": dnac.topo['sites'][site]}
+                dnac_core.add(["topology", site, {"fabric": dnac.topo['fabrics'][fabname]}])
 
 
 def find_wlc(dnac, dnac_core, resp):

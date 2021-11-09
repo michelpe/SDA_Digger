@@ -143,6 +143,7 @@ def build_hierarch(dnac, dnac_core):
     resp = dnac.geturl("/dna/intent/api/v1/site")
     sites = resp["response"]
     site_view = []
+    fabsites=[]
     dnac.topo = {'sites': {}, 'fabrics': {}, 'devices': {}, 'ip2uuid': {}, 'reach': {}, 'hostnames': {}, 'stack': {}}
     for site in sites:
         if 'parentId' in site.keys():
@@ -165,8 +166,29 @@ def build_hierarch(dnac, dnac_core):
                 fabric_list.append(resp['fabricName'])
                 fabname=resp['fabricName']
             if fabname is not None:
-                dnac.topo['fabrics'][fabname] = {"site": site, "id": dnac.topo['sites'][site]}
-                dnac_core.add(["topology", site, {"fabric": dnac.topo['fabrics'][fabname]}])
+                fabsites.append({"site": site, "id": dnac.topo['sites'][site]})
+    if len (fabsites) == 0:
+        print(f"no fabric sites found with fabric {fabname}")
+    elif len(fabsites) == 1:
+        site=fabsites[0]["site"]
+    else:
+        print(f"Found multiple sites for Fabric {fabname} :")
+        [print(f"{x}:{fabsites[x]['site']}") for x in range (1,len(fabsites))]
+        sitenr = input ("Which site should be used:")
+        if sitenr.isnumeric():
+            site_nr = int(sitenr)
+            if (site_nr>0) and (site_nr<len(fabsites)):
+                site = fabsites[site_nr]['site']
+            else:
+                print(f"invalid site id")
+                exit()
+        else:
+            print(f"invalid site id")
+            exit()
+
+    if fabname is not None:
+        dnac.topo['fabrics'][fabname] = {"site": site, "id": dnac.topo['sites'][site]}
+        dnac_core.add(["topology", site, {"fabric": dnac.topo['fabrics'][fabname]}])
 
 
 def find_wlc(dnac, dnac_core, resp):

@@ -51,7 +51,23 @@ apedge_cmd_list = ["show access-tunnel summary"]
 
 EDGEROLES = ["EDGENODE", "EDGE NODE"]
 BORDERROLES = ["BORDER NODE", "BORDERNODE"]
-MSROLES = ["MAPSERVER","CONTROL PLANE"]
+MSROLES = ["MAPSERVER", "CONTROL PLANE"]
+
+
+def build_and_choose(choices,what):
+    print(f"Available {what}:")
+    choice_table = {}
+    for x,choice in enumerate(choices):
+        print(f"{x}: {choice}")
+        choice_table[x]=choice
+    while True:
+        userchoice = input(f"Which {what} should be used : ")
+        if userchoice.isnumeric():
+            if int(userchoice) in choice_table.keys():
+                 return choice_table[int(userchoice)]
+
+
+
 
 
 def BuildIdlist(dnac, dnac_core, roles):
@@ -65,7 +81,7 @@ def BuildIdlist(dnac, dnac_core, roles):
     return devid
 
 
-def printraw(ret,dnac):
+def printraw(ret, dnac):
     if dnac.bypassprint is True:
         return
     answer = input("Analysis complete, print outputs y/n:")
@@ -81,10 +97,11 @@ def printraw(ret,dnac):
 def check_dev(dnac, dnac_core, fabric, dev):
     resp = dnac.geturl(f"/dna/intent/api/v1/business/sda/device?deviceIPAddress={dev['managementIpAddress']}")
     if "status" in resp.keys():
-        if resp["status"]=="failed":
-           resp = dnac.geturl(f"/dna/intent/api/v1/business/sda/device?deviceManagementIpAddress={dev['managementIpAddress']}")
-           #recreateing hierachie compatigle with pre 2.2.3
-           resp["response"] = resp
+        if resp["status"] == "failed":
+            resp = dnac.geturl(
+                f"/dna/intent/api/v1/business/sda/device?deviceManagementIpAddress={dev['managementIpAddress']}")
+            # recreateing hierachie compatigle with pre 2.2.3
+            resp["response"] = resp
     uuid = dev['instanceUuid']
     dnac.topo['devices'][uuid] = dev['hostname']
     dnac.topo['hostnames'][dev['hostname']] = uuid
@@ -101,7 +118,7 @@ def check_dev(dnac, dnac_core, fabric, dev):
     if "response" in resp.keys():
         if resp['response']['status'] == "success":
             troles = resp['response']['roles']
-            roles =[]
+            roles = []
             for trole in troles:
                 if trole.upper() in MSROLES:
                     roles.append("MAPSERVER")
@@ -138,23 +155,32 @@ def check_dev(dnac, dnac_core, fabric, dev):
         exit()
     return
 
-
 def build_hierarch(dnac, dnac_core):
     resp = dnac.geturl("/dna/intent/api/v1/site")
     sites = resp["response"]
     site_view = []
-    fabsites=[]
+    fabsites = []
+    fabric_list = []
+    fabname = ""
     dnac.topo = {'sites': {}, 'fabrics': {}, 'devices': {}, 'ip2uuid': {}, 'reach': {}, 'hostnames': {}, 'stack': {}}
     for site in sites:
         if 'parentId' in site.keys():
-            site_view.append(site['siteNameHierarchy'])
-            dnac.topo['sites'][site['siteNameHierarchy']] = site['id']
+            type = "unknown"
+            for attrs in site['additionalInfo']:
+                if 'type' in attrs['attributes'].keys():
+                    type = attrs['attributes']['type']
+            if not type.lower() == 'floor':
+                site_view.append(site['siteNameHierarchy'])
+                dnac.topo['sites'][site['siteNameHierarchy']] = site['id']
     site_view.sort()
     print("Discovered Areas/Buildings/floors:")
     [print(x) for x in site_view]
-    fabric_list = []
-    if dnac.clisite is not None and dnac.fabric is not None:
-        return
+    if dnac.clisite is not None :
+        if dnac.clisite in site_view:
+            site_view = [dnac.clisite]
+        else:
+            print(f"{dnac.clisite} not found , exiting")
+            exit()
     for site in site_view:
         resp = dnac.geturl(f"/dna/intent/api/v1/business/sda/fabric-site?siteNameHierarchy={site.replace(' ', '+')}")
         if resp['status'] == "success":
@@ -164,31 +190,40 @@ def build_hierarch(dnac, dnac_core):
                 fabname = resp['fabricSiteName']
             elif "fabricName" in resp.keys():
                 fabric_list.append(resp['fabricName'])
-                fabname=resp['fabricName']
+                fabname = resp['fabricName']
             if fabname is not None:
-                fabsites.append({"site": site, "id": dnac.topo['sites'][site]})
-    if len (fabsites) == 0:
-        print(f"no fabric sites found with fabric {fabname}")
-    elif len(fabsites) == 1:
-        site=fabsites[0]["site"]
-    else:
-        print(f"Found multiple sites for Fabric {fabname} :")
-        [print(f"{x}:{fabsites[x]['site']}") for x in range (1,len(fabsites))]
-        sitenr = input ("Which site should be used:")
-        if sitenr.isnumeric():
-            site_nr = int(sitenr)
-            if (site_nr>0) and (site_nr<len(fabsites)):
-                site = fabsites[site_nr]['site']
-            else:
-                print(f"invalid site id")
-                exit()
-        else:
-            print(f"invalid site id")
+                fabsites.append({"fabric": fabname, "site": site, "id": dnac.topo['sites'][site]})
+    if len(fabric_list) == 0:
+       if dnac.clifabric is not None and dnac.clisite is not None:
+           fabname = dnac.clifabric
+           site = dnac.clisite
+       else:
+           print(f"No fabrics found using dynamic discover, please use -s <site> -f <fabric> ")
+    fabric_list=list(set(fabric_list))
+    if dnac.clifabric is not None:
+        if dnac.clifabric not in fabric_list:
+            print(f"Fabric {dnac.clifabric} not found")
             exit()
+    else:
+        fabname = build_and_choose(fabric_list,"fabric")
+    fab_site_list = {}
+    for raw_site in fabsites:
+        if raw_site['fabric'] == fabname:
+            fab_site_list[raw_site["site"]]=raw_site["id"]
+    if dnac.clisite is None:
+        site=build_and_choose(fab_site_list.keys(),"site")
+    elif dnac.clisite in fab_site_list.keys():
+        site=dnac.clisite
+    else:
+        print(f"site {dnac.clisite} not found ")
+        exit()
 
-    if fabname is not None:
-        dnac.topo['fabrics'][fabname] = {"site": site, "id": dnac.topo['sites'][site]}
-        dnac_core.add(["topology", site, {"fabric": dnac.topo['fabrics'][fabname]}])
+    dnac.fabric = fabname
+    dnac.topo['fabrics'][fabname] = {"site": site, "id": dnac.topo['sites'][site]}
+    dnac_core.add(["topology", site, {"fabric": dnac.topo['fabrics'][fabname]}])
+    check_fabric(fabname, dnac, dnac_core)
+    return
+
 
 
 def find_wlc(dnac, dnac_core, resp):
@@ -225,6 +260,37 @@ def find_wlc(dnac, dnac_core, resp):
 
     return
 
+def check_site_fabric(fabric,dnac,dnac_core):
+    sites = dnac_core.get(["fabsites", fabric])
+    if sites is None:
+        check_fabric(fabric, dnac, dnac_core)
+    else:
+       print(f"Found  sites for Fabric {fabric} :")
+       site_list={}
+       for x,site in enumerate(sites):
+           site_list[x]=site
+           print (f"{x}:{site}")
+       while True:
+           if len(site.keys())==1:
+               sitenr=1
+           else:
+               sitenr = input("Which site should be used:")
+           if sitenr.isnumeric():
+              site_nr = int(sitenr)
+              if (site_nr >= 0) and (site_nr < len(sites)):
+                  site = site_list[site_nr]
+                  break
+              else:
+                  print(f"invalid site id")
+                  exit()
+           else:
+              print(f"invalid site id")
+              exit()
+    dnac.topo['fabrics'][fabric] = {"site": site, "id": dnac.topo['sites'][site]}
+    dnac_core.add(["topology", site, {"fabric": dnac.topo['fabrics'][fabric]}])
+    dnac.fabric = fabric
+    check_fabric(fabric, dnac, dnac_core)
+    return
 
 def check_fabric(fabric, dnac, dnac_core):
     #   for fabric in fabric_list:
@@ -264,43 +330,7 @@ def check_fabric(fabric, dnac, dnac_core):
         ParseCommands.ParseConfig(resp["response"], edge[edge_dev]["name"], dnac_core)
     Analysis.Config2Fabric(dnac, dnac_core)
     Analysis.CP2Fabric(dnac, dnac_core)
-    return
 
-
-def Build_Lisp_Fabric(dnac, dnac_core, fabric):
-    # print (fabric)
-    if len(dnac.topo['fabrics']) == 1:
-        print("Only one fabric found, proceeding")
-        for fabric in dnac.topo['fabrics']:
-            check_fabric(fabric, dnac, dnac_core)
-            dnac.fabric = fabric
-    elif len(dnac.topo['fabrics']) > 1:
-        while True:
-            if fabric is None:
-                print("Found Fabrics:")
-                for fabrics in dnac.topo['fabrics'].keys():
-                    print(fabrics)
-                fabric = input(f"Which fabric should be used: ")
-            if fabric not in dnac.topo['fabrics'].keys():
-                print(f"Fabric: {fabric} not found")
-                fabric = None
-            if fabric in dnac.topo['fabrics'].keys():
-                dnac.fabric = fabric
-                check_fabric(fabric, dnac, dnac_core)
-                break
-    else:
-        # fabric_list.append(fabric)
-        site = dnac.clisite
-        if site in dnac.topo['sites'].keys() and fabric is not None:
-            dnac.topo['fabrics'][fabric] = {"site": site, "id": dnac.topo['sites'][site]}
-            dnac_core.add(["topology", site, {"fabric": dnac.topo['fabrics'][fabric]}])
-            dnac.fabric = fabric
-            check_fabric(fabric, dnac, dnac_core)
-        else:
-            print(
-                f"No fabrics found usind dynamic discovery. If fabrics are present please use -s <fabric site> and -f "
-                f"<fabric> option ")
-            exit()
     return
 
 
@@ -317,7 +347,7 @@ def SessionAnalysis(dnac, dnac_core):
     for responses in ret:
         ParseCommands.ParseSingleDev(responses["output"], responses["host"], dnac_core)
     Analysis.CheckLispSession(dnac, dnac_core)
-    printraw(ret,dnac)
+    printraw(ret, dnac)
     return
 
 
@@ -425,7 +455,7 @@ def WirelessAP(dnac, dnac_core):
     for responses in ret:
         ParseCommands.ParseSingleDev(responses["output"], responses["host"], dnac_core)
     full_ret.extend(ret)
-    printraw(full_ret,dnac)
+    printraw(full_ret, dnac)
     return
 
 
@@ -476,13 +506,6 @@ def Menu(dnac, dnac_core):
             McastUnderlay(dnac, dnac_core)
 
 
-
-
-
-
-
-
-
 def main(argv):
     dnac = None
     username = None
@@ -502,6 +525,7 @@ def main(argv):
         sys.exit(2)
     esc_option = None
     site = None
+    fabric = None
     for opt, arg in opts:
         if opt == '-h':
             print(
@@ -530,7 +554,7 @@ def main(argv):
         elif opt in "-b":
             inputdir = arg
             dnac_core = AnalysisCore.Analysis_Core()
-            ParseBundle.ParseBundle(dnac_core, inputdir,debug)
+            ParseBundle.ParseBundle(dnac_core, inputdir, debug)
             exit()
     if dnac is None:
         dnac = input("DNAC IP address :")
@@ -540,12 +564,12 @@ def main(argv):
         password = getpass()
     dnac = DNAC_Connector.DnacCon(dnac, username, password, logdir)
     dnac.clisite = site
+    dnac.clifabric = fabric
     if debug is True:
         dnac.debug = True
     while True:
         dnac_core = AnalysisCore.Analysis_Core()
         build_hierarch(dnac, dnac_core)
-        Build_Lisp_Fabric(dnac, dnac_core, fabric)
         if esc_option is not None:
             if esc_option == "l3eif":
                 print("Performing L3 LEAD index analysis")

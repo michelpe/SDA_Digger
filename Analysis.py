@@ -924,6 +924,9 @@ def Device2Mac(dnac, dnac_core, debug_core, inp):
     for responses in ret:
         ParseCommands.ParseSingleDev(responses["output"], responses["host"], debug_core)
     mactable = debug_core.get(["Global", "mac", inp])
+    if mactable is None:
+        print("No endpoints found")
+        return
     dttable = debug_core.get(["Global", "Device-tracking", inp])
     i = 0
     entries = {}

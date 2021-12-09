@@ -43,6 +43,7 @@ class DnacCon:
         self.crunnerretry = 0
         self.conn = None
         self.clisite = None
+        self.clifabric = None
         self.bypassprint = False
 
         time.localtime()

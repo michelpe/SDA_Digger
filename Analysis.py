@@ -126,7 +126,7 @@ def LispDBAnalysis(dnac, dnac_core):
                     else:
                         success = True
                         for cp in cpnodes:
-                            if  dnac_core.get(["lisp", "site", edgeinstanceaf, cp,edgeinstance]) is not None:
+                             if  dnac_core.get(["lisp", "site", edgeinstanceaf, cp,edgeinstance]) is not None:
                                 if edgeeid in dnac_core.get(["lisp", "site", edgeinstanceaf, cp, edgeinstance]).keys():
                                     # print(f"LISP Database Analysis: found {edgeeid} on CP node {cp}")
                                     rloc = dnac_core.get(["lisp", "site", edgeinstanceaf, cp, edgeinstance, edgeeid]).get(

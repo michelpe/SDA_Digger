@@ -126,21 +126,22 @@ def LispDBAnalysis(dnac, dnac_core):
                     else:
                         success = True
                         for cp in cpnodes:
-                            if edgeeid in dnac_core.get(["lisp", "site", edgeinstanceaf, cp, edgeinstance]).keys():
-                                # print(f"LISP Database Analysis: found {edgeeid} on CP node {cp}")
-                                rloc = dnac_core.get(["lisp", "site", edgeinstanceaf, cp, edgeinstance, edgeeid]).get(
-                                    'Last Register').split(':')[0]
-                                if rloc == edgeip:
-                                    pass
-                                elif rloc == "--":
-                                    pass
-                                elif rloc in wlcip:
-                                    pass
-                                else:
-                                    success = False
-                                    print(
-                                        f"LISP Database Analysis: {edgeeid} : In LISP database on {edgename}({edgeip}) CP node: {cp} reports RLOC {rloc} ")
-                                    failedeid.append(edgeeid)
+                            if  dnac_core.get(["lisp", "site", edgeinstanceaf, cp,edgeinstance]) is not None:
+                                if edgeeid in dnac_core.get(["lisp", "site", edgeinstanceaf, cp, edgeinstance]).keys():
+                                    # print(f"LISP Database Analysis: found {edgeeid} on CP node {cp}")
+                                    rloc = dnac_core.get(["lisp", "site", edgeinstanceaf, cp, edgeinstance, edgeeid]).get(
+                                        'Last Register').split(':')[0]
+                                    if rloc == edgeip:
+                                        pass
+                                    elif rloc == "--":
+                                        pass
+                                    elif rloc in wlcip:
+                                        pass
+                                    else:
+                                        success = False
+                                        print(
+                                            f"LISP Database Analysis: {edgeeid} : In LISP database on {edgename}({edgeip}) CP node: {cp} reports RLOC {rloc} ")
+                                        failedeid.append(edgeeid)
                         if success == False:
                             statfail = statfail + 1
                         else:

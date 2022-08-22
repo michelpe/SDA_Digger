@@ -60,6 +60,10 @@ def build_and_choose(choices,what):
     for x,choice in enumerate(choices):
         print(f"{x}: {choice}")
         choice_table[x]=choice
+    if len(choice_table) == 1:
+        print(f"Only one option for {what} using {choice_table[0]}  ")
+        return choice_table[0]
+
     while True:
         userchoice = input(f"Which {what} should be used : ")
         if userchoice.isnumeric():

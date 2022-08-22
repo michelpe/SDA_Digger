@@ -141,6 +141,10 @@ class DnacCon:
                     ret = (res.read())
                     print(
                         f"Internal Error encountered {ret} (bapi errors often resolved by disabling/enabling the RESTAPI bundle under platform/manager")
+                if res.status == 400:
+                    #SDA API's returning 400 error for devices not in fabric. Returning Failed response code
+                    content = res.read()
+                    return json.loads(content)
                 if res.status == 401:
                     ret = (res.read())
                     self.get_token()

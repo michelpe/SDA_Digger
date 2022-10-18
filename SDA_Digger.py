@@ -167,15 +167,15 @@ def build_hierarch(dnac, dnac_core):
     fabric_list = []
     fabname = ""
     dnac.topo = {'sites': {}, 'fabrics': {}, 'devices': {}, 'ip2uuid': {}, 'reach': {}, 'hostnames': {}, 'stack': {}}
+
     for site in sites:
         if 'parentId' in site.keys():
             type = "unknown"
             for attrs in site['additionalInfo']:
                 if 'type' in attrs['attributes'].keys():
                     type = attrs['attributes']['type']
-            if not type.lower() == 'floor':
-                site_view.append(site['siteNameHierarchy'])
-                dnac.topo['sites'][site['siteNameHierarchy']] = site['id']
+            site_view.append(site['siteNameHierarchy'])
+            dnac.topo['sites'][site['siteNameHierarchy']] = site['id']
     site_view.sort()
     print("Discovered Areas/Buildings/floors:")
     [print(x) for x in site_view]
@@ -185,18 +185,24 @@ def build_hierarch(dnac, dnac_core):
         else:
             print(f"{dnac.clisite} not found , exiting")
             exit()
+    found_sites=[]
     for site in site_view:
-        resp = dnac.geturl(f"/dna/intent/api/v1/business/sda/fabric-site?siteNameHierarchy={site.replace(' ', '+')}")
-        if resp['status'] == "success":
-            fabname = None
-            if "fabricSiteName" in resp.keys():
-                fabric_list.append(resp['fabricSiteName'])
-                fabname = resp['fabricSiteName']
-            elif "fabricName" in resp.keys():
-                fabric_list.append(resp['fabricName'])
-                fabname = resp['fabricName']
-            if fabname is not None:
-                fabsites.append({"fabric": fabname, "site": site, "id": dnac.topo['sites'][site]})
+        parent="/".join(site.split("/")[:-1])
+        if parent not in found_sites:
+            resp = dnac.geturl(f"/dna/intent/api/v1/business/sda/fabric-site?siteNameHierarchy={site.replace(' ', '+')}")
+            if resp['status'] == "success":
+                fabname = None
+                if "fabricSiteName" in resp.keys():
+                    fabric_list.append(resp['fabricSiteName'])
+                    fabname = resp['fabricSiteName']
+                elif "fabricName" in resp.keys():
+                    fabric_list.append(resp['fabricName'])
+                    fabname = resp['fabricName']
+                if fabname is not None:
+                    fabsites.append({"fabric": fabname, "site": site, "id": dnac.topo['sites'][site]})
+                    found_sites.append(site)
+        else:
+            found_sites.append(site)
     if len(fabric_list) == 0:
        if dnac.clifabric is not None and dnac.clisite is not None:
            fabname = dnac.clifabric
@@ -221,7 +227,6 @@ def build_hierarch(dnac, dnac_core):
     else:
         print(f"site {dnac.clisite} not found ")
         exit()
-
     dnac.fabric = fabname
     dnac.topo['fabrics'][fabname] = {"site": site, "id": dnac.topo['sites'][site]}
     dnac_core.add(["topology", site, {"fabric": dnac.topo['fabrics'][fabname]}])

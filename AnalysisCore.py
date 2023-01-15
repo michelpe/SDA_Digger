@@ -20,6 +20,36 @@ import json
 class Analysis_Core:
     def __init__(self):
         self.Parsed = {}
+        self.rootpoint = None
+        self.depth = 0
+        self.iterlist = []
+        self.value = None
+
+#setiter function must be be called to setup iter function so that depth rootpoint is set
+    def setiter(self, rootpoint, depth):
+        self.rootpoint = rootpoint
+        self.depth = depth - 1
+        self.iterlist = list(range(depth))
+        self.value = None
+
+#recursive function to go through the nested dict structure and yield when reaching the depth
+    def print_nested_dict(self, d, levl):
+        if levl == self.depth:
+            for key, value in d.items():
+                self.iterlist[levl] = key
+                yield self.iterlist, value
+        else:
+            for key, value in d.items():
+                self.iterlist[levl] = key
+                if isinstance(value, dict) and self.depth > levl:
+                    for retvalues in self.print_nested_dict(value, levl + 1):
+                        yield retvalues
+
+#iter function , needs setting of rootpoint and depth so the class can be iterated over
+    def __iter__(self):
+        for keylist, value in self.print_nested_dict(self.get(self.rootpoint), 0):
+            yield keylist, value
+        return
 
     def nesting(self, tdt, clist):
         # print(f"{tdt} {type(clist)}\n")

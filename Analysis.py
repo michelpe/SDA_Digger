@@ -539,9 +539,9 @@ def check_locals(svi, sifs, device):
 
 
 def check_dt(dnac, dnac_core):
-    devices = dnac_core.get(["Global", "Device-tracking"]).keys()
-    if devices is None:
+    if dnac_core.get(["Global", "Device-tracking"]) is None:
         return
+    devices = dnac_core.get(["Global", "Device-tracking"]).keys()
     succes = mismatch = notfound = 0
     total_succes = total_mismatch = total_notfound = 0
     for device in devices:
@@ -1002,6 +1002,8 @@ def DuplicateEid(dnac, dnac_core):
     teid = {}
     unique = 0
     duplicate = 0
+    if db is None:
+        return
     for device in db.keys():
         local_macs = dnac_core.get(["lisp", "svi_interface", device])
         local_addr = []

@@ -566,6 +566,7 @@ def check_MTU(dnac, dnac_core):
     badmtu = goodmtu = 0
     devicedb = dnac_core.get(["Global", "MTU"])
     if devicedb is None:
+        print(f"MTU Analysis: System MTU not set on any devices, default MTU is 1500, please set MTU to avoid drops")
         return
     devices = devicedb.keys()
 

@@ -564,9 +564,11 @@ def check_dt(dnac, dnac_core):
 def check_MTU(dnac, dnac_core):
     mtus = []
     badmtu = goodmtu = 0
-    devices = dnac_core.get(["Global", "MTU"]).keys()
-    if devices is None:
+    devicedb = dnac_core.get(["Global", "MTU"])
+    if devicedb is None:
         return
+    devices = devicedb.keys()
+
     for device in devices:
         MTU = dnac_core.get(["Global", "MTU", device])
         if MTU is None:

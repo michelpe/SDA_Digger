@@ -51,7 +51,7 @@ def build_dnac_data(dnac, dnac_core):
     devs = dnac_core.get(["lisp", "roles"])
     if devs is None:
         print("Device configuration not parsed to determine device roles, exiting")
-        exit()
+        return None
     borders = []
     cp = []
     edges = []
@@ -88,7 +88,8 @@ def ParseBundle(dnac_core, indir,debug):
     for file in files:
         if re.match(r".*\.txt$", file):
             parsetext(indir, file, dnac_core)
-    build_dnac_data(dnac, dnac_core)
+    if build_dnac_data(dnac, dnac_core) is None:
+        return
     Analysis.Config2Fabric(dnac, dnac_core)
     Analysis.CP2Fabric(dnac, dnac_core)
     Analysis.CheckLispSession(dnac, dnac_core)

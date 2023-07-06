@@ -49,7 +49,7 @@ def parsetext(indir, file, dnac_core):
 # When Using Bundle no data has been pulled from DNAC. Creating Dummy data to run analysis scripts
 def build_dnac_data(dnac, dnac_core):
     devs = dnac_core.get(["lisp", "roles"])
-    if devs is None:
+    if devs is False:
         print("Device configuration not parsed to determine device roles, exiting")
         return None
     borders = []
@@ -76,7 +76,8 @@ def build_dnac_data(dnac, dnac_core):
     for edge in edges:
         dnac_core.add(["devices", dnac.fabric, "EDGENODE", devis[edge]['ip'],
                        {"name": edge, "id": devis[edge]["uuid"]}])
-    return
+
+    return True
 
 
 # Read all files in offline analysis bundle and execute various analysis scripts on offline bundle
@@ -88,7 +89,7 @@ def ParseBundle(dnac_core, indir,debug):
     for file in files:
         if re.match(r".*\.txt$", file):
             parsetext(indir, file, dnac_core)
-    if build_dnac_data(dnac, dnac_core) is None:
+    if build_dnac_data(dnac, dnac_core) is False:
         return
     Analysis.Config2Fabric(dnac, dnac_core)
     Analysis.CP2Fabric(dnac, dnac_core)

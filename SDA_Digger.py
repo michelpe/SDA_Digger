@@ -443,6 +443,8 @@ def McastUnderlay(dnac, dnac_core):
         mcastcmds.append(f"show ip mfib {mcastgroups}")
         mcastcmds.append(f"show device-tracking database")
         mcastcmds.append(f"show mac address-table")
+        mcastcmds.append(f"show ip pim neighbor")
+        mcastcmds.append(f"show spanning-tree summary")
     if len(devices_id_list) > 0:
         ret = dnac.command_run(mcastcmds, devices_id_list)
         for responses in ret:

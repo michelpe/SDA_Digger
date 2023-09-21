@@ -106,6 +106,11 @@ def check_dev(dnac, dnac_core, fabric, dev):
                 f"/dna/intent/api/v1/business/sda/device?deviceManagementIpAddress={dev['managementIpAddress']}")
             # recreateing hierachie compatigle with pre 2.2.3
             resp["response"] = resp
+            if resp["status"] == "failed":
+                resp = dnac.geturl(
+                    f"/dna/intent/api/v1/business/sda/device/role?deviceManagementIpAddress={dev['managementIpAddress']}")
+                # Fixing changes that came in 2.3.3.x and later
+                resp["response"] = resp
     uuid = dev['instanceUuid']
     dnac.topo['devices'][uuid] = dev['hostname']
     dnac.topo['hostnames'][dev['hostname']] = uuid

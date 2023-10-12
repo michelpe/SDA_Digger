@@ -21,6 +21,7 @@ import json
 import time
 import os
 import re
+from DiggerInOut import *
 
 
 class DnacCon:
@@ -60,7 +61,7 @@ class DnacCon:
                 pass
             else:
                 os.makedirs(self.logdir)
-            print(f"Storing outputs in directory {self.logdir}")
+            dig_out_function(f"Storing outputs in directory {self.logdir}")
         else:
             self.fabric = "Bundled"
 
@@ -77,7 +78,7 @@ class DnacCon:
         try:
             self.conn = http.client.HTTPSConnection(self.DNAC, context=ssl._create_unverified_context())
         except:
-            print(f"error connecting to server {self.DNAC}")
+            dig_out_function(f"error connecting to server {self.DNAC}")
             exit()
 
         headers = {
@@ -85,11 +86,11 @@ class DnacCon:
             'authorization': f"Basic {auth64}"
         }
         try:
-            # print(headers)
+            # dig_out_function(headers)
             self.conn.request("POST", f"https://{self.DNAC}/api/system/v1/auth/token", headers=headers)
             # print (headers)
         except:
-            print(f"Error connecting to server {self.DNAC}, exiting")
+            dig_out_function(f"Error connecting to server {self.DNAC}, exiting")
             exit()
 
         res = self.conn.getresponse()
@@ -97,13 +98,13 @@ class DnacCon:
         if res.status == 200:
             data = json.loads(res.read())
             self.token = data["Token"]
-            print(f"Connection established to {self.DNAC}")
+            dig_out_function(f"Connection established to {self.DNAC}")
         elif res.status == 401:
-            print(f"Incorrect Username/Password supplied, unable to login to DNAC")
-            print(res.status)
+            dig_out_function(f"Incorrect Username/Password supplied, unable to login to DNAC")
+            dig_out_function(res.status)
             exit(0)
         else:
-            print(f"Error {res.status} encountered when trying to retrieve token")
+            dig_out_function(f"Error {res.status} encountered when trying to retrieve token")
             exit(0)
         self.connect_dnac("t", "t", headers)
         return
@@ -120,13 +121,13 @@ class DnacCon:
         }
         realurl = f"https://{self.DNAC}{url}"
         if self.debug is True:
-            print(f"Debug: Calling URL {realurl}")
+            dig_out_function(f"Debug: Calling URL {realurl}")
         try:
             # conn = http.client.HTTPSConnection(self.DNAC, context=ssl._create_unverified_context())
             self.conn.request("GET", realurl, headers=headers)
             # print (realurl)
         except:
-            print(f"Error connecting to server {self.DNAC}, exiting")
+            dig_out_function(f"Error connecting to server {self.DNAC}, exiting")
             exit()
         while True:
             try:
@@ -134,12 +135,12 @@ class DnacCon:
             except:
                 self.conn = http.client.HTTPSConnection(self.DNAC, context=ssl._create_unverified_context())
                 self.conn.request("GET", realurl, headers=headers)
-                print(f"Reopening https connection")
+                dig_out_function(f"Reopening https connection")
             else:
                 # print (res.status)
                 if res.status == 404:
                     ret = (res.read())
-                    print(
+                    dig_out_function(
                         f"Internal Error encountered {ret} (bapi errors often resolved by disabling/enabling the RESTAPI bundle under platform/manager")
                 if res.status == 400:
                     #SDA API's returning 400 error for devices not in fabric. Returning Failed response code
@@ -149,23 +150,23 @@ class DnacCon:
                     ret = (res.read())
                     self.get_token()
                 elif res.status == 429:
-                    print(f"Exceeded limit for API calls calling {url}, pausing for 60 seconds")
+                    dig_out_function(f"Exceeded limit for API calls calling {url}, pausing for 60 seconds")
                     time.sleep(60)
-                    print(f"Reopening https connection to {self.DNAC} after pausing")
+                    dig_out_function(f"Reopening https connection to {self.DNAC} after pausing")
                     self.conn = http.client.HTTPSConnection(self.DNAC, context=ssl._create_unverified_context())
                     self.conn.request("GET", realurl, headers=headers)
                 elif res.status > 299:
-                    print(f"{res.status} error encountered when trying to get {url}")
+                    dig_out_function(f"{res.status} error encountered when trying to get {url}")
                     resp = res.read()
                     if type(resp) == bytes:
                         resp=resp.decode('utf-8').strip("{}")
-                    print(f"Error response: {resp}")
+                    dig_out_function(f"Error response: {resp}")
                     exit(0)
                 else:
                     break
         content = res.read()
         if self.debug is True:
-            print(f"Debug: Calling URL {json.loads(content)}")
+            dig_out_function(f"Debug: Calling URL {json.loads(content)}")
         return json.loads(content)
 
     def post(self, url, payload):
@@ -179,7 +180,7 @@ class DnacCon:
             # conn = http.client.HTTPSConnection(self.DNAC, context=ssl._create_unverified_context())
             self.conn.request("POST", f"https://{self.DNAC}{url}", jpay, headers=header)
         except:
-            print(f"Error connecting to server {self.DNAC},  exiting")
+            dig_out_function(f"Error connecting to server {self.DNAC},  exiting")
             exit()
         res = self.conn.getresponse()
         return json.loads(res.read())
@@ -192,22 +193,23 @@ class DnacCon:
         self.conn = http.client.HTTPSConnection(self.DNAC, context=ssl._create_unverified_context())
         resp = self.post("/dna/intent/api/v1/network-device-poller/cli/read-request", payload)
         if "response" not in resp.keys():
-            print(resp)
+            dig_out_function(resp)
         if 'errorCode' in resp["response"].keys():
-            print(f"Encountered unexpected error: {resp['response']['errorCode']} : {resp['response']['message']}")
+            dig_out_function(
+                f"Encountered unexpected error: {resp['response']['errorCode']} : {resp['response']['message']}")
             exit()
         tresp = self.geturl(resp["response"]["url"])
         while "endTime" not in tresp["response"].keys():
             i = i + 1
             time.sleep(1)
             if i % 5 == 0:
-                print(f"o", end="")
+                dig_out_function(f"o", end="")
             tresp = self.geturl(resp["response"]["url"])
             if i > 300:
-                print(f"Timeout exceeded, exiting")
+                dig_out_function(f"Timeout exceeded, exiting")
                 exit()
         if i > 30:
-            print(f"\nNotice: Slow response from DNAC running Command runner, response took {i} seconds)")
+            dig_out_function(f"\nNotice: Slow response from DNAC running Command runner, response took {i} seconds)")
         fileId = json.loads(tresp["response"]["progress"])
         fresp = self.geturl(f"/dna/intent/api/v1/file/{fileId['fileId']}")
         # print (fresp)
@@ -222,8 +224,8 @@ class DnacCon:
                     for command in single_resp['commandResponses']['FAILURE']:
                         for failed_cli in single_resp['commandResponses']["FAILURE"].keys():
                             if self.debug is True:
-                                print(f"Failed command : {failed_cli}")
-                        # print(single_resp['commandResponses']["FAILURE"])
+                                dig_out_function(f"Failed command : {failed_cli}")
+                        # dig_out_function(single_resp['commandResponses']["FAILURE"])
                     pass
         combined = {}
         olddir = os.getcwd()
@@ -266,7 +268,7 @@ class DnacCon:
             i = i + 1
             t = t + 1
             if len(cmds) > 3 or i == len(commands):
-                print(f".", end="")
+                dig_out_function(f".", end="")
                 tret.extend(self.command_run_batch(cmds, devs))
                 t = 0
                 cmds = []
@@ -290,7 +292,7 @@ class DnacCon:
         ttret = []
         if self.crunnerretry > 10:
             return None
-        print(f"Requesting {len(commands)} commands on {len(devs)} device(s) via {self.DNAC}")
+        dig_out_function(f"Requesting {len(commands)} commands on {len(devs)} device(s) via {self.DNAC}")
         self.update_reachable()
         tret = []
         ttret = []
@@ -309,7 +311,7 @@ class DnacCon:
                     t = 0
                     devices = []
             else:
-                print(f"skipping device {self.topo['devices'][dev]} in state {self.topo['reach'][dev]}")
+                dig_out_function(f"skipping device {self.topo['devices'][dev]} in state {self.topo['reach'][dev]}")
         sucdevs = set()
         for tre in tret:
             succeshost = tre.get('host')
@@ -317,7 +319,7 @@ class DnacCon:
                 sucdevs.add(succeshost)
         sucset = devicenames.difference(sucdevs)
         if len(sucset) > 0:
-            print(f"Command runner failed on {len(sucset)} devices {sucset} retrying")
+            dig_out_function(f"Command runner failed on {len(sucset)} devices {sucset} retrying")
             retrydevs = []
             for devs in sucset:
                 self.crunnerretry = self.crunnerretry + 1
@@ -327,7 +329,7 @@ class DnacCon:
                 tret.extend(resp)
         self.crunnerretry = self.crunnerretry - 1
         if self.crunnerretry < 1:
-            print("\nCompleted")
+            dig_out_function("\nCompleted")
             self.crunnerretry = 0
         if tret is None:
             tret["response"] = {}

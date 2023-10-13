@@ -24,6 +24,7 @@ import re
 from DiggerInOut import *
 
 
+
 class DnacCon:
     server = None
     username = None

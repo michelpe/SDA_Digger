@@ -280,7 +280,7 @@ def check_site_fabric(fabric,dnac,dnac_core):
     if sites is None:
         check_fabric(fabric, dnac, dnac_core)
     else:
-        dig_out_function(f"Found  sites for Fabric {fabric} :")
+       dig_out_function(f"Found  sites for Fabric {fabric} :")
        site_list={}
        for x,site in enumerate(sites):
            site_list[x]=site

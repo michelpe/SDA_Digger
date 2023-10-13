@@ -95,7 +95,6 @@ def dig_in_function(text, *args, **kwargs):
     global digger_gui
     return (digger_gui.inp(text))
 
-
 def dig_gui_enable():
     global digger_gui
     if digger_gui is None:

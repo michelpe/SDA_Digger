@@ -102,7 +102,6 @@ class DnacCon:
             dig_out_function(f"Connection established to {self.DNAC}")
         elif res.status == 401:
             dig_out_function(f"Incorrect Username/Password supplied, unable to login to DNAC")
-            dig_out_function(res.status)
             exit(0)
         else:
             dig_out_function(f"Error {res.status} encountered when trying to retrieve token")

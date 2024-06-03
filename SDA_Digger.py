@@ -55,21 +55,19 @@ BORDERROLES = ["BORDER NODE", "BORDERNODE"]
 MSROLES = ["MAPSERVER", "CONTROL PLANE"]
 
 
-def build_and_choose(choices,what):
+def build_and_choose(choices, what):
+    if len(choices) == 1:
+        return (choices[0])
     dig_out_function(f"Available {what}:")
     choice_table = {}
-    for x,choice in enumerate(choices):
+    for x, choice in enumerate(choices):
         dig_out_function(f"{x}: {choice}")
-        choice_table[x]=choice
-    if len(choice_table) == 1:
-        dig_out_function(f"Only one option for {what} using {choice_table[0]}  ")
-        return choice_table[0]
-
+        choice_table[x] = choice
     while True:
         userchoice = dig_in_function(f"Which {what} should be used : ")
         if userchoice.isnumeric():
             if int(userchoice) in choice_table.keys():
-                 return choice_table[int(userchoice)]
+                return choice_table[int(userchoice)]
 
 
 
@@ -197,7 +195,7 @@ def build_hierarch(dnac, dnac_core):
         if parent not in found_sites:
             resp = dnac.geturl(f"/dna/intent/api/v1/business/sda/fabric-site?siteNameHierarchy={site.replace(' ', '+')}")
             if resp['status'] == "success":
-                fabname = None
+                fabname = ["Default LAN Fabric"]
                 if "fabricSiteName" in resp.keys():
                     fabric_list.append(resp['fabricSiteName'])
                     fabname = resp['fabricSiteName']

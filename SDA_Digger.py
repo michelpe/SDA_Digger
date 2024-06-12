@@ -56,20 +56,18 @@ MSROLES = ["MAPSERVER", "CONTROL PLANE"]
 
 
 def build_and_choose(choices, what):
-    if len(choices) == 1:
-        return (choices[0])
     dig_out_function(f"Available {what}:")
     choice_table = {}
     for x, choice in enumerate(choices):
         dig_out_function(f"{x}: {choice}")
         choice_table[x] = choice
+    if len(choice_table) == 1:
+        return choice_table[0]
     while True:
         userchoice = dig_in_function(f"Which {what} should be used : ")
         if userchoice.isnumeric():
             if int(userchoice) in choice_table.keys():
                 return choice_table[int(userchoice)]
-
-
 
 
 
@@ -195,13 +193,16 @@ def build_hierarch(dnac, dnac_core):
         if parent not in found_sites:
             resp = dnac.geturl(f"/dna/intent/api/v1/business/sda/fabric-site?siteNameHierarchy={site.replace(' ', '+')}")
             if resp['status'] == "success":
-                fabname = ["Default LAN Fabric"]
+                fabname = None
                 if "fabricSiteName" in resp.keys():
                     fabric_list.append(resp['fabricSiteName'])
                     fabname = resp['fabricSiteName']
                 elif "fabricName" in resp.keys():
                     fabric_list.append(resp['fabricName'])
                     fabname = resp['fabricName']
+                elif "fabricDomainType" in resp.keys():
+                    fabric_list.append(resp['siteNameHierarchy'])
+                    fabname = resp['siteNameHierarchy']
                 if fabname is not None:
                     fabsites.append({"fabric": fabname, "site": site, "id": dnac.topo['sites'][site]})
                     found_sites.append(site)
@@ -219,13 +220,16 @@ def build_hierarch(dnac, dnac_core):
             dig_out_function(f"Fabric {dnac.clifabric} not found")
             exit()
     else:
-        fabname = build_and_choose(fabric_list,"fabric")
+        if fabname != "Default LAN Fabric":
+            fabname = build_and_choose(fabric_list, "fabric")
     fab_site_list = {}
     for raw_site in fabsites:
         if raw_site['fabric'] == fabname:
             fab_site_list[raw_site["site"]]=raw_site["id"]
     if dnac.clisite is None:
-        site=build_and_choose(fab_site_list.keys(),"site")
+        site = build_and_choose(fab_site_list.keys(), "Fabric sites")
+        if fabname == "Default LAN Fabric":
+            fabname = site
     elif dnac.clisite in fab_site_list.keys():
         site=dnac.clisite
     else:
@@ -307,7 +311,8 @@ def check_site_fabric(fabric,dnac,dnac_core):
 
 def check_fabric(fabric, dnac, dnac_core):
     #   for fabric in fabric_list:
-    dig_out_function(f"Discovered devices in Fabric {fabric} :")
+    if (fabric != "Default LAN Fabric"):
+        dig_out_function(f"Discovered devices in Fabric {fabric} :")
     resp = dnac.geturl(f"/dna/intent/api/v1/membership/{dnac.topo['fabrics'][fabric]['id']}")
     devices = resp['device']
     find_wlc(dnac, dnac_core, resp)

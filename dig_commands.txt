@@ -1,7 +1,7 @@
 1:XE_EDGE:show ip route $vrf $ipv4
 1:XE_EDGE:show ip route $vrf $ipdest
 1:XE_EDGE:show ip  cef $vrf $ipv4 internal
-1:XE_EDGE:show ip  arp $vrf $ipv
+1:XE_EDGE:show ip  arp $vrf $ipv4
 1:XE_EDGE:show ip  cef $vrf $ipdest internal
 1:XE_EDGE:show version
 1:XE_EDGE:show lisp instance-id $l2inst ethernet database $macaddress
@@ -20,6 +20,8 @@
 1:XE_EDGE:show cts role-based counters 
 1:XE_EDGE:sh cts role-based permissions 
 1:XE_EDGE:sh cts rbacl
+1:XE_EDGE:show cts rolebased sgt-map vrf $vrf all
+1:XE_EDGE:show cts authorization entries
 1:XE_EDGE:sh lisp instance-id $l2inst ethernet statistics
 1:XE_EDGE:sh lisp instance-id $l3inst ipv4 statistics
 1:XE_EDGE:sh lisp instance-id $l3inst ipv6 statistics

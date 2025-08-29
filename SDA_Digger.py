@@ -26,16 +26,21 @@ from getpass import getpass
 import ParseBundle
 from DiggerInOut import *
 
-edge_cmd_list = [["show lisp session", "show lisp instance * ethernet database", "sh lisp instance-id * ipv4 database",
-                  "sh lisp instance-id * ipv6 database", "show device-tracking database"]
-                 ]
+edge_cmd_list = ["show lisp session", "show lisp instance * ethernet database", "sh lisp instance-id * ipv4 database",
+                 "sh lisp instance-id * ipv6 database", "show device-tracking database",
+                 "show lisp instance-id * ethernet database wlc client",
+                 "show lisp instance-id * ethernet database wlc access-point",
+                 "show lisp instance-id * ethernet database wlc detail"]
+
+
 session_cmd_list = [
     "show lisp session", "show lisp instance * ethernet database", "sh lisp instance-id * ipv4 database",
     "sh lisp instance-id * ipv6 database"]
 
 cts_cmd_list = [
     "sh cts environment", "sh cts role-based counters", "sh cts role-based permissions",
-    "sh cts rbacl", "sh cts authorization entries"]
+    "sh cts rbacl", "sh cts authorization entries", "sh cts authorization entries",
+    "show cts role-based sgt-map platform", "show cef vrf"]
 auth_cmd_list = [
     "show access-session method dot1x details",
     "show access-session method mab details", "sh device-tracking database", "show aaa servers"]
@@ -47,7 +52,7 @@ mc_cmd_list = ["show lisp instance-id * ethernet map-cache", "show lisp instance
                "show lisp instance-id * ipv6 map-cache"]
 
 wlc_cmd_list = ["show ap summary", "show fabric ap summary", "show fabric wlan summary",
-                "sh wireless fabric client summary ", "sh wireless fabric summary "]
+                "show wireless fabric client summary ", "show wireless fabric summary ", "sh wireless client summary"]
 apedge_cmd_list = ["show access-tunnel summary"]
 
 EDGEROLES = ["EDGENODE", "EDGE NODE"]
@@ -399,7 +404,7 @@ def DatabaseAnalysis(dnac, dnac_core):
     for edge_dev in edge:
         edges.append(edge[edge_dev]["id"])
     if len(edges) > 0:
-        ret = dnac.command_run(db_cmd_list, edges)
+        ret = dnac.command_run(edge_cmd_list, edges)
         for responses in ret:
             ParseCommands.ParseSingleDev(responses["output"], responses["host"], dnac_core)
         dig_out_function(f"Completed import on {len(edges)} edges")

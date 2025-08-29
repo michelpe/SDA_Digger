@@ -502,9 +502,10 @@ def checksvi(dnac, dnac_core):
     for device in devices.keys():
         if devices[device]["Border"] is False and devices[device]["CP"] is False and devices[device]["XTR"] is True:
             svi_info = dnac_core.get(["lisp", "svi_interface", device])
-            for svi in svi_info.keys():
-                svilist.append(json.dumps(svi_info))
-            edgelist.append(device)
+            if svi_info is not None:
+                for svi in svi_info.keys():
+                    svilist.append(json.dumps(svi_info))
+                edgelist.append(device)
     if len(svilist) == 0:
         return
     best_svi = collections.Counter(svilist).most_common(1)[0][0]

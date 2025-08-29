@@ -15,6 +15,7 @@ or implied.
 """
 
 import json
+import sys
 
 
 class Analysis_Core:
@@ -134,3 +135,15 @@ class Analysis_Core:
             else:
                 return None
         return tdt
+
+    def save(self, file):
+        with open(file, "w") as outfile:
+            outfile.write(json.dumps(self.Parsed))
+        print(f"Exported {sys.getsizeof(self.Parsed)} bytes from datastore to {file}")
+        return
+
+    def load(self, file):
+        with open(file, "r") as infile:
+            self.Parsed = json.load(infile)
+        print(f"Imported {sys.getsizeof(self.Parsed)} bytes from {file} into data store")
+        return

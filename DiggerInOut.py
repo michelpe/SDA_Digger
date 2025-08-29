@@ -48,6 +48,8 @@ class DiggerGui:
 
     def out(self, text, *args, **kwargs):
         # print(kwargs)
+        if text is None:
+            return
         if self.gui is False:
             if len(text) == 1:
                 print(text, end='')

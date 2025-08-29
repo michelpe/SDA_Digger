@@ -38,23 +38,19 @@ def splititup(output, divider):
 
 
 def IPRoute(output, hostname, dnac_core):
+    route_types = ["C", "S", "L", "O", "B", "D", "i", "EX", "R", "M", "E2", "E1", "N1", "N2", "IL1", "IL2", "IA", "SU"]
     iproute = []
     for line in output:
         splitline = line.split()
-        ipadd = re.findall(r"\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}/32", line)
-        if len(ipadd) > 0:
-            iproute.append(ipadd[0].split('/')[0])
-        if len(splitline) > 0:
-            if splitline[0] == "C":
-                # Check for Loopback0
-                if splitline[-1] == "Loopback0":
-                    ip = splitline[1].split("/")[0]
-                    dnac_core.modify(["Global", "Devices", hostname], 'IP Address', ip)
-                    dnac_core.add(["Global", "IP", ip, {"Hostname": hostname}])
+        if len(splitline) > 1:
+            if splitline[0] in route_types:
+                for splits in splitline:
+                    ipadd = re.findall(r"\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}", splits)
+                    if len(ipadd) > 0:
+                        iproute.append(ipadd[0].split('/')[0])
     if len(iproute) > 0:
         dnac_core.add(["Global", "routing", hostname, {"Global": iproute}])
     return
-
 
 def CTSEnv(output, hostname, dnac_core):
     for line in output:

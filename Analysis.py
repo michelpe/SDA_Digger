@@ -357,11 +357,13 @@ def CheckRLOCreach(dnac, dnac_core):
     reachtotal = 0
     devices = {}
     roles = ["EDGENODE", "BORDERNODE"]
+    devs = []
     for role in roles:
-        devs = dnac_core.get(["devices", dnac.fabric, role])
-        if devs is None:
-            return
-        devices.update(dnac_core.get(["devices", dnac.fabric, role]))
+        if dnac_core.get(["devices", dnac.fabric, role]) is not None:
+            devices.update(dnac_core.get(["devices", dnac.fabric, role]))
+    if len(devices) == 0:
+        dig_out_function(f"No edge or border devices found in fabric {dnac.fabric}, skipping reachability check")
+        return
     for device in devices:
         rlocips.append(device)
         rlocnames.append(devices[device]["name"])
@@ -383,7 +385,7 @@ def CheckRLOCreach(dnac, dnac_core):
             dig_out_function(
                 f"Reachability Analysis: {lispdevice} missing /32 reachability to :  {set(rlocips).difference(t)}")
     dig_out_function(
-        f"Reachability Analysis: Fabric Devices with full (/32) reachabily {reachsuccess}, devices without full reachability {reachfail}," +
+        f"Reachability Analysis: Fabric Edge Devices with full (/32) reachabily {reachsuccess}, devices without full reachability {reachfail}," +
         f" not checked {reachtotal - (reachsuccess + reachfail)}")
     CheckBFD(dnac, dnac_core)
     return

@@ -104,6 +104,7 @@ def ParseBundle(dnac_core, indir,debug):
     Analysis.checksvi(dnac, dnac_core)
     Analysis.CheckAP_fp_rp(dnac, dnac_core)
     Analysis.DuplicateEid(dnac, dnac_core)
+    Analysis.CheckRLOCreach(dnac, dnac_core)
     if debug is True:
         dnac_core.printit()
     return

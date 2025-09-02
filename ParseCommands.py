@@ -63,6 +63,22 @@ def CTSEnv(output, hostname, dnac_core):
     return
 
 
+def CTS_Permissions(output, hostname, dnac_core):
+    for i, line in enumerate(output):
+        splitline = line.split()
+        tdict = {}
+        sgts = {}
+        if len(splitline) > 0:
+            if re.match(r"^IPv4", line):
+                sgts = re.findall(r"\d+:\w+", line)
+                if len(sgts) == 2:
+                    tdict = {"src": sgts[0], "dst": sgts[1], "policy": output[i + 1].strip()}
+                    dnac_core.add(["Authentication", "CTS", "Permissions", hostname, f"{sgts[0]}->{sgts[1]}", tdict])
+                    sgts = {}
+    return
+
+
+
 def ParseLoop0(output, hostname, dnac_core):
     for lines in output:
         if re.match(r"^ ip address", lines):
@@ -121,10 +137,13 @@ def ParseIP(output, key, hostname, dnac_core):
 
 
 def ParseCTS(output, key, hostname, dnac_core):
-    # print(key)
     if len(key) > 1:
         if re.match(r"env.*", key[1]):
             CTSEnv(output, hostname, dnac_core)
+        elif re.match(r".*role.*", key[1]):
+            if len(key) > 2:
+                if re.match(r"permis.*", key[2]):
+                    CTS_Permissions(output, hostname, dnac_core)
     return
 
 

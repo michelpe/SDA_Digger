@@ -95,7 +95,7 @@ def ParseBundle(dnac_core, indir,debug):
     Analysis.CP2Fabric(dnac, dnac_core)
     Analysis.CheckLispSession(dnac, dnac_core)
     Analysis.LispDBAnalysis(dnac, dnac_core)
-    Analysis.CheckEdgeMC(dnac, dnac_core)
+    # Analysis.CheckEdgeMC(dnac, dnac_core)
     Analysis.check_MTU(dnac, dnac_core)
     Analysis.check_dt(dnac, dnac_core)
     Analysis.CheckAuth(dnac, dnac_core)

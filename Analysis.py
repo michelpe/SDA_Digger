@@ -476,6 +476,24 @@ def CheckAccessTunnels():
     return
 
 
+def Check_Permissions(permissions, dnac, dnac_core):
+    dnac_core.setiter(["Authentication", "CTS", "Permissions"], 2)
+    checked = failed = 0
+    for host, entry in dnac_core:
+        checked += 1
+        if dnac_core.get(["CTS", entry['dst'], entry['src']]) is None:
+            dnac_core.add(["CTS", entry['dst'], entry['src'], {"policy": entry['policy']}])
+        else:
+            if dnac_core.get(["CTS", entry['dst'], entry['src']])['policy'] != entry['policy']:
+                dig_out_function(
+                    f"CTS Permissions Analysis: Mismatch in permissions between {entry['src']} and {entry['dst']} on {host[0]}, {dnac_core.get(['CTS', entry['dst'], entry['src']])['policy']} configured, {entry['policy']} expected")
+                failed += 1
+        # print(f"{host[1]}+{entry['dst']}")
+    dig_out_function(
+        f"CTS Permissions Analysis: Verified {checked} permissions entries on {len(permissions)} devices with {failed} failures")
+    return
+
+
 def CheckCTS(dnac, dnac_core):
     ctsdevs = ctsfailed = 0
     ctsinfo = dnac_core.get(["Authentication", "CTS", "Devices"])
@@ -489,6 +507,9 @@ def CheckCTS(dnac, dnac_core):
         else:
             dig_out_function(f"CTS Enviroment error: CTS enviroment data not complete on {ctsdevice} state is {state}")
             ctsfailed = ctsfailed + 1
+    permissions = dnac_core.get(["Authentication", "CTS", "Permissions"])
+    if permissions is not None:
+        Check_Permissions(permissions, dnac, dnac_core)
     dig_out_function(
         f"CTS Analysis: verified CTS on {ctsdevs} nodes, {ctsfailed} failures found")
     return

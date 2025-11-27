@@ -517,7 +517,7 @@ def CheckCTS(dnac, dnac_core):
 
 def checksvi(dnac, dnac_core):
     devices = dnac_core.get(["lisp", "roles"])
-    good_svi = bad_svi = 0
+    good_svi = bad_svi = bad_bn = 0
     if devices is None:
         return
     edgelist = []
@@ -540,9 +540,24 @@ def checksvi(dnac, dnac_core):
             dig_out_function(
                 f"SVI Analysis: Device {device} has inconsistent Interface Vlan configuration with all other edge devices")
             bad_svi = bad_svi + 1
+    best_svi = json.loads(best_svi)
+    for device in devices.keys():
+        if devices[device]["Border"] is True:
+            svi_info = dnac_core.get(["lisp", "svi_interface", device])
+            for svi in svi_info:
+                if svi in best_svi:
+                    if svi_info[svi]["mac"] == best_svi[svi]["mac"] and svi_info[svi]["ip"] == best_svi[svi]["ip"]:
+                        pass
+                    else:
+                        bad_bn += 1
+                        dig_out_function(
+                            f"SVI Analysis: Border Device {device} has inconsistent SVI configuration for {svi} with Edges")
     dig_out_function(
-        f"SVI Analysis: Analyzed Interface Vlan config on {bad_svi + good_svi} , found inconsistency on {bad_svi} ")
-    return
+        f"SVI Analysis: Verified {len(edgelist)} edge devices with SVI info, {good_svi} consistent , {bad_svi} inconsistent, {bad_bn} border devices with inconsistent SVI info")
+
+
+
+
 
 
 def check_locals(svi, sifs, device):

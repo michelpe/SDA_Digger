@@ -544,14 +544,15 @@ def checksvi(dnac, dnac_core):
     for device in devices.keys():
         if devices[device]["Border"] is True:
             svi_info = dnac_core.get(["lisp", "svi_interface", device])
-            for svi in svi_info:
-                if svi in best_svi:
-                    if svi_info[svi]["mac"] == best_svi[svi]["mac"] and svi_info[svi]["ip"] == best_svi[svi]["ip"]:
-                        pass
-                    else:
-                        bad_bn += 1
-                        dig_out_function(
-                            f"SVI Analysis: Border Device {device} has inconsistent SVI configuration for {svi} with Edges")
+            if svi_info is not None:
+                for svi in svi_info and svi_info is not None:
+                    if svi in best_svi:
+                        if svi_info[svi]["mac"] == best_svi[svi]["mac"] and svi_info[svi]["ip"] == best_svi[svi]["ip"]:
+                            pass
+                        else:
+                            bad_bn += 1
+                            dig_out_function(
+                                f"SVI Analysis: Border Device {device} has inconsistent SVI configuration for {svi} with Edges")
     dig_out_function(
         f"SVI Analysis: Verified {len(edgelist)} edge devices with SVI info, {good_svi} consistent , {bad_svi} inconsistent, {bad_bn} border devices with inconsistent SVI info")
 

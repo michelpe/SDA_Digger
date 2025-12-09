@@ -545,7 +545,7 @@ def checksvi(dnac, dnac_core):
         if devices[device]["Border"] is True:
             svi_info = dnac_core.get(["lisp", "svi_interface", device])
             if svi_info is not None:
-                for svi in svi_info and svi_info is not None:
+                for svi in svi_info:
                     if svi in best_svi:
                         if svi_info[svi]["mac"] == best_svi[svi]["mac"] and svi_info[svi]["ip"] == best_svi[svi]["ip"]:
                             pass

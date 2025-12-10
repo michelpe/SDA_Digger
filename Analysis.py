@@ -372,18 +372,17 @@ def CheckRLOCreach(dnac, dnac_core):
     for lispdevice in rlocnames:
         if lispdevice in iptables.keys():
             iptable = set(iptables[lispdevice]["Global"])
+            if set(rlocips).issubset(iptable):
+                reachsuccess = reachsuccess + 1
+                pass
+            else:
+                reachfail = reachfail + 1
+                t = iptable.copy()
+                t.intersection_update(set(rlocips))
+                dig_out_function(
+                    f"Reachability Analysis: {lispdevice} missing /32 reachability to :  {set(rlocips).difference(t)}")
         else:
             dig_out_function(f"Notice: Routing table of {lispdevice} not gathered, skipping")
-            break
-        if set(rlocips).issubset(iptable):
-            reachsuccess = reachsuccess + 1
-            pass
-        else:
-            reachfail = reachfail + 1
-            t = iptable.copy()
-            t.intersection_update(set(rlocips))
-            dig_out_function(
-                f"Reachability Analysis: {lispdevice} missing /32 reachability to :  {set(rlocips).difference(t)}")
     dig_out_function(
         f"Reachability Analysis: Fabric Edge Devices with full (/32) reachabily {reachsuccess}, devices without full reachability {reachfail}," +
         f" not checked {reachtotal - (reachsuccess + reachfail)}")

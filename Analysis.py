@@ -664,6 +664,10 @@ def CheckAuth(dnac, dnac_core):
                         dig_out_function(
                             f"Authentication Analysis: client {mac} on {interface} {device} using an APIPA IPv4 Address")
                         apipa = apipa + 1
+                    elif re.match(r"127", ipv4):
+                        dig_out_function(
+                            f"Authentication Analysis: client {mac} on {interface} {device} using a Loopback IPv4 Address")
+                        noip = noip + 1
                     else:
                         okip = okip + 1
                 else:

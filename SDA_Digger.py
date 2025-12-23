@@ -484,6 +484,59 @@ def WirelessAP(dnac, dnac_core):
     return
 
 
+def FloodingRIAnalysis(dnac, dnac_core):
+    devices_id_list = BuildIdlist(dnac, dnac_core, ["EDGENODE"])
+    ret = dnac.command_run(["show vlan", "show switch"], devices_id_list)
+    for responses in ret:
+        ParseCommands.ParseSingleDev(responses["output"], responses["host"], dnac_core)
+    fail = 0
+    total = 0
+    vlans = dnac_core.get(["Global", "VLANs"])
+    if vlans is None:
+        dig_out_function("No VLANs found, cannot perform Flooding RI analysis")
+        return
+    for device in vlans:
+        if dnac_core.get(["Global", "Stackinfo", device]) is None:
+            pass
+        else:
+            for switchnr in dnac_core.get(["Global", "Stackinfo", device]):
+                total += 1
+                role = dnac_core.get(["Global", "Stackinfo", device, switchnr])['Role']
+                ricmds = []
+                dig_out_function(f"Analyzing device {device} switch {switchnr} for flooding RI entries", dnac)
+                for vlan in vlans[device]:
+                    if re.match(r".*L2LI.*", vlans[device][vlan]["Ports"]):
+                        ricmds.append(f"show platform hardware fed switch {switchnr} vlan {vlan} ingress")
+                if len(ricmds) > 0:
+                    ret = dnac.command_run(ricmds, [dnac.topo["hostnames"][device]])
+                    ricmds = []
+                    for responses in ret:
+                        for line in responses["output"].split():
+                            if re.match(r"^0x[0-9a-fA-F]+$", line):
+                                ricmds.append(
+                                    f"sh platform hardware fed switch {switchnr}  fwd-asic abstraction print-resource-handle {line} 1")
+                    if len(ricmds) > 0:
+                        ret = dnac.command_run(ricmds, [dnac.topo["hostnames"][device]])
+                        ricmds = []
+                        for responses in ret:
+                            for line in responses["output"].split():
+                                if re.match(r"^uri[01]\:*", line):
+                                    ricmds.append(
+                                        f"sh platform hardware fed switch {switchnr}  fwd-asic resource asic all rewrite-index range {line.split(':')[-1]} {line.split(':')[-1]}")
+                                if re.match(r".*port=88", line) or re.match(r".*ri_list", line):
+                                    if role != "Active":
+                                        dig_out_function(
+                                            f"Device {device} switch {switchnr} has flooding RI entry {line} but is not active in stack, possible cause of flooding issues",
+                                            dnac)
+                                        fail += 1
+                            if len(ricmds) > 0:
+                                ret = dnac.command_run(list(set(ricmds)), [dnac.topo["hostnames"][device]])
+    dig_out_function(
+        f"Flooding RI analysis completed, analyzed total of {total} stackmembers on {len(devices_id_list)} edges, found {fail} issues",
+        dnac)
+    exit()
+    return
+
 def Menu(dnac, dnac_core):
     while True:
         dig_out_function(f"\n\n\nPlease choose one of the following options:")
@@ -604,6 +657,10 @@ def main(argv):
             if esc_option == "l3eif":
                 dig_out_function("Performing L3 LEAD index analysis")
                 Check_L3IF(dnac, dnac_core)
+            elif esc_option == "floodri":
+                dig_out_function("Performing Flooding RI analysis")
+                FloodingRIAnalysis(dnac, dnac_core)
+
         Menu(dnac, dnac_core)
     return
 

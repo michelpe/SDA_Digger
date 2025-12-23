@@ -424,6 +424,32 @@ def ParseFabric(output, key, hostname, dnac_core):
     return
 
 
+def ParseVlan(output, hostname, dnac_core):
+    for line in output:
+        if re.match(r"^\d{1,4}\s", line):
+            linesplit = line.split()
+            dnac_core.add(["Global", "VLANs", hostname, linesplit[0], {"Name": linesplit[1],
+                                                                       "Status": linesplit[2],
+                                                                       "Ports": ' '.join(linesplit[3:])}])
+    return
+
+
+def ParseSwitch(output, hostname, dnac_core):
+    for line in output:
+        parts = line.split()
+        if len(parts) == 6:
+            dnac_core.add(["Global", "Stackinfo", hostname, parts[0][-1],
+                           {
+                               "Role": parts[1],
+                               "Mac": parts[2],
+                               "Priority": parts[3],
+                               "State": parts[4],
+                               "Version": parts[5]}])
+    return
+
+
+
+
 def ParseSingleDev(output, hostname, dnac_core):
     command = re.split(r"\n", output)[0]
     output = re.split(r"\n", output)
@@ -440,6 +466,10 @@ def ParseSingleDev(output, hostname, dnac_core):
             ParseCTS(output, splitkey[1:], hostname, dnac_core)
         elif re.match(r"running", splitkey[1]):
             ParseConfig(output, hostname, dnac_core)
+        elif re.match(r"vlan", splitkey[1]):
+            ParseVlan(output, hostname, dnac_core)
+        elif re.match(r"switch", splitkey[1]):
+            ParseSwitch(output, hostname, dnac_core)
         elif re.match(r"access-tunnel", splitkey[1]):
             ParseAccessTunnel(output, splitkey[1:], hostname,dnac_core)
         elif re.match(r"device-tracking", splitkey[1]):

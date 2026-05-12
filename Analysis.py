@@ -576,6 +576,8 @@ def check_locals(svi, sifs, device):
                 f"Device-tracking analysis: No Device-Tracking local entry for SVI Vlan{svi_id} on {device}")
             notfound = notfound + 1
         else:
+            if "mac" not in svi[f"Vlan{svi_id}"].keys():
+                svi[f"Vlan{svi_id}"]["mac"] = ""
             if local_sifs.get(svi_id)["mac"] == svi[f"Vlan{svi_id}"]["mac"]:
                 succes = succes + 1
             else:

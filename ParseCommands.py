@@ -136,14 +136,56 @@ def ParseIP(output, key, hostname, dnac_core):
             IPMFib(output, hostname, dnac_core)
 
 
+def CTSPac(output, hostname, dnac_core):
+    pac = {}
+    aid = None
+
+    def add_pac():
+        if aid is not None and len(pac) > 0:
+            dnac_core.add(["Authentication", "CTS", "PACs", hostname, aid, pac.copy()])
+
+    for line in output:
+        stripped = line.strip()
+        if len(stripped) == 0:
+            continue
+        if re.match(r"^AID:", line):
+            aid = stripped.split(":", 1)[1].strip()
+            pac = {"AID": aid}
+        elif aid is not None:
+            if re.match(r"^PAC-Info:", stripped):
+                continue
+            elif re.match(r"^PAC-type\s*=", stripped):
+                pac["PAC-type"] = stripped.split("=", 1)[1].strip()
+            elif re.match(r"^AID:", stripped):
+                pac["PAC-Info AID"] = stripped.split(":", 1)[1].strip()
+            elif re.match(r"^I-ID:", stripped):
+                pac["I-ID"] = stripped.split(":", 1)[1].strip()
+            elif re.match(r"^A-ID-Info:", stripped):
+                pac["A-ID-Info"] = stripped.split(":", 1)[1].strip()
+            elif re.match(r"^Credential Lifetime:", stripped):
+                pac["Credential Lifetime"] = stripped.split(":", 1)[1].strip()
+            elif re.match(r"^PAC-Opaque:", stripped):
+                pac["PAC-Opaque"] = stripped.split(":", 1)[1].strip()
+            elif re.match(r"^Refresh timer", stripped):
+                pac["Refresh timer"] = stripped
+                add_pac()
+                aid = None
+                pac = {}
+
+    return
+
+
 def ParseCTS(output, key, hostname, dnac_core):
     if len(key) > 1:
         if re.match(r"env.*", key[1]):
             CTSEnv(output, hostname, dnac_core)
+        elif re.match(r".*pac.*", key[1]):
+            CTSPac(output, hostname, dnac_core)
         elif re.match(r".*role.*", key[1]):
             if len(key) > 2:
                 if re.match(r"permis.*", key[2]):
                     CTS_Permissions(output, hostname, dnac_core)
+
     return
 
 

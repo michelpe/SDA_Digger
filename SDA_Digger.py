@@ -40,7 +40,7 @@ session_cmd_list = [
 cts_cmd_list = [
     "sh cts environment", "sh cts role-based counters", "sh cts role-based permissions",
     "sh cts rbacl", "sh cts authorization entries", "sh cts authorization entries",
-    "show cts role-based sgt-map platform", "show cef vrf"]
+    "show cts role-based sgt-map platform", "show cef vrf", "show cts pacs"]
 auth_cmd_list = [
     "show access-session method dot1x details",
     "show access-session method mab details", "sh device-tracking database", "show aaa servers"]

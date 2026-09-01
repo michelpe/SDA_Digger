@@ -494,11 +494,23 @@ def Check_Permissions(permissions, dnac, dnac_core):
 
 
 def CheckCTS(dnac, dnac_core):
-    ctsdevs = ctsfailed = 0
+    ctsdevs = ctsfailed = ctspac = ctspacfail = 0
     ctsinfo = dnac_core.get(["Authentication", "CTS", "Devices"])
     if ctsinfo is None:
         return
     for ctsdevice in ctsinfo.keys():
+        ctspac += 1
+        pacs = dnac_core.get(["Authentication", "CTS", "PACs", ctsdevice])
+        if pacs is None:
+            dig_out_function(f"CTS Analysis: No PACs found on {ctsdevice}")
+            ctspacfail += 1
+            continue
+        else:
+            for pac in pacs:
+                if not (re.match(r"^Refresh timer is set", pacs[pac]["Refresh timer"])):
+                    dig_out_function(f"CTS Analysis: PAC {pac} on {ctsdevice} is being refreshed")
+
+
         state = ctsinfo.get(ctsdevice).get("State")
         ctsdevs = ctsdevs + 1
         if state == "COMPLETE":
@@ -510,7 +522,7 @@ def CheckCTS(dnac, dnac_core):
     if permissions is not None:
         Check_Permissions(permissions, dnac, dnac_core)
     dig_out_function(
-        f"CTS Analysis: verified CTS on {ctsdevs} nodes, {ctsfailed} failures found")
+        f"CTS Analysis: verified CTS on {ctsdevs} nodes, {ctsfailed} failures found, {ctspac} PACs verified, {ctspacfail} PACs failures found")
     return
 
 
